@@ -56,8 +56,12 @@
 @interface RCTEventDispatcher (RCTScrollView)
 
 /**
- * Send a fake scroll event.
+ * Send a scroll event.
+ * (You can send a fake scroll event by passing nil for scrollView).
  */
-- (void)sendFakeScrollEvent:(NSNumber *)reactTag;
+- (void)sendScrollEventWithType:(RCTScrollEventType)type
+                       reactTag:(NSNumber *)reactTag
+                     scrollView:(UIScrollView *)scrollView
+                       userData:(NSDictionary *)userData;
 
 @end

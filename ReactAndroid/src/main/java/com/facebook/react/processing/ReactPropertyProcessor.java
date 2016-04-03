@@ -578,8 +578,7 @@ public class ReactPropertyProcessor extends AbstractProcessor {
       if (checkPropertyExists(name)) {
         throw new ReactPropertyException(
             "Module " + mClassName + " has already registered a property named \"" +
-                name + "\". If you want to override a property, don't add" +
-                "the @ReactProp annotation to the property in the subclass", propertyInfo);
+                name + '"', propertyInfo);
       }
 
       mProperties.add(propertyInfo);

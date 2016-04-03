@@ -150,7 +150,7 @@ public abstract class ReactActivity extends Activity implements DefaultHardwareB
     mLifecycleState = LifecycleState.BEFORE_RESUME;
 
     if (mReactInstanceManager != null) {
-      mReactInstanceManager.onHostPause();
+      mReactInstanceManager.onPause();
     }
   }
 
@@ -161,7 +161,7 @@ public abstract class ReactActivity extends Activity implements DefaultHardwareB
     mLifecycleState = LifecycleState.RESUMED;
 
     if (mReactInstanceManager != null) {
-      mReactInstanceManager.onHostResume(this, this);
+      mReactInstanceManager.onResume(this, this);
     }
   }
 
@@ -170,7 +170,7 @@ public abstract class ReactActivity extends Activity implements DefaultHardwareB
     super.onDestroy();
 
     if (mReactInstanceManager != null) {
-      mReactInstanceManager.destroy();
+      mReactInstanceManager.onDestroy();
     }
   }
 

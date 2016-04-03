@@ -11,7 +11,7 @@
 'use strict';
 
 var React = require('react-native');
-var requestAnimationFrame = require('fbjs/lib/requestAnimationFrame');
+var requestAnimationFrame = require('requestAnimationFrame');
 
 var {
   StyleSheet,

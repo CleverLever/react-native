@@ -32,9 +32,11 @@ type DefaultProps = {
 type Event = Object;
 
 /**
- * @deprecated
- *
- * Use <Switch> instead for cross-platform compatibility.
+ * Use `SwitchIOS` to render a boolean input on iOS.  This is
+ * a controlled component, so you must hook in to the `onValueChange` callback
+ * and update the `value` prop in order for the component to update, otherwise
+ * the user's change will be reverted immediately to reflect `props.value` as the
+ * source of truth.
  */
 var SwitchIOS = React.createClass({
   mixins: [NativeMethodsMixin],

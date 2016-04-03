@@ -14,19 +14,10 @@
 
 #pragma once
 
-#include <functional>
-
 #include <jni.h>
 
 #include <jni/Environment.h>
-
-#ifdef FBJNI_DEBUG_REFS
-# ifdef __ANDROID__
-#  include <android/log.h>
-# else
-#  include <cstdio>
-# endif
-#endif
+#include <jni/ALog.h>
 
 /// @cond INTERNAL
 
@@ -47,7 +38,7 @@ namespace jni {
  * unhelpful way (typically a segfault) while trying to handle an exception
  * which occurs later.
  */
-jint initialize(JavaVM*, std::function<void()>&&) noexcept;
+jint initialize(JavaVM*, void(*)()) noexcept;
 
 namespace internal {
 
@@ -62,22 +53,14 @@ inline JNIEnv* getEnv() noexcept {
 }
 
 // Define to get extremely verbose logging of references and to enable reference stats
-#ifdef FBJNI_DEBUG_REFS
+#if defined(__ANDROID__) && defined(FBJNI_DEBUG_REFS)
 template<typename... Args>
-inline void dbglog(const char* msg, Args... args) {
-# ifdef __ANDROID__
-  __android_log_print(ANDROID_LOG_VERBOSE, "fbjni_dbg", msg, args...);
-# else
-  std::fprintf(stderr, msg, args...);
-# endif
+inline void dbglog(Args... args) noexcept {
+  facebook::alog::logv("fbjni_ref", args...);
 }
-
 #else
-
 template<typename... Args>
-inline void dbglog(const char*, Args...) {
-}
-
+inline void dbglog(Args...) noexcept {}
 #endif
 
 }}}

@@ -100,9 +100,9 @@ var PickerAndroid = React.createClass({
       var position = event.nativeEvent.position;
       if (position >= 0) {
         var value = this.props.children[position].props.value;
-        this.props.onValueChange(value, position);
+        this.props.onValueChange(value);
       } else {
-        this.props.onValueChange(null, position);
+        this.props.onValueChange(null);
       }
     }
 
@@ -134,8 +134,7 @@ var cfg = {
     items: true,
     selected: true,
   }
-};
-
+}
 var DropdownPicker = requireNativeComponent('AndroidDropdownPicker', PickerAndroid, cfg);
 var DialogPicker = requireNativeComponent('AndroidDialogPicker', PickerAndroid, cfg);
 

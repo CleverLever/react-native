@@ -14,6 +14,7 @@
 #include <atomic>
 
 #include "Exceptions.h"
+#include "References.h"
 
 namespace facebook {
 namespace jni {

@@ -58,17 +58,13 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:coder)
 
 - (void)insertReactSubview:(UIView *)subview atIndex:(__unused NSInteger)atIndex
 {
-  RCTAssert([_modalViewController.view reactTag] == nil, @"Modal view can only have one subview");
   [subview addGestureRecognizer:_touchHandler];
-  subview.autoresizingMask = UIViewAutoresizingFlexibleHeight |
-                             UIViewAutoresizingFlexibleWidth;
   _modalViewController.view = subview;
 }
 
 - (void)removeReactSubview:(UIView *)subview
 {
   RCTAssert(subview == _modalViewController.view, @"Cannot remove view other than modal view");
-  [subview removeGestureRecognizer:_touchHandler];
   _modalViewController.view = nil;
 }
 
@@ -86,11 +82,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:coder)
 
   if (!_isPresented && self.window) {
     RCTAssert(self.reactViewController, @"Can't present modal view controller without a presenting view controller");
-    [self.reactViewController presentViewController:_modalViewController animated:self.animated completion:^{
-      if (_onShow) {
-        _onShow(nil);
-      }
-    }];
+    [self.reactViewController presentViewController:_modalViewController animated:self.animated completion:nil];
     _isPresented = YES;
   }
 }

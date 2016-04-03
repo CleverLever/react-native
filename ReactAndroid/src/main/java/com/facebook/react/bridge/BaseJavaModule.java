@@ -9,9 +9,10 @@
 
 package com.facebook.react.bridge;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+
 import com.facebook.infer.annotation.Assertions;
 import com.facebook.systrace.Systrace;
-import com.facebook.systrace.SystraceMessage;
 
 import javax.annotation.Nullable;
 
@@ -56,14 +57,14 @@ public abstract class BaseJavaModule implements NativeModule {
     }
 
     public abstract @Nullable T extractArgument(
-        CatalystInstance catalystInstance, ExecutorToken executorToken, ReadableNativeArray jsArguments, int atIndex);
+        CatalystInstance catalystInstance, ReadableNativeArray jsArguments, int atIndex);
   }
 
   static final private ArgumentExtractor<Boolean> ARGUMENT_EXTRACTOR_BOOLEAN =
       new ArgumentExtractor<Boolean>() {
         @Override
         public Boolean extractArgument(
-            CatalystInstance catalystInstance, ExecutorToken executorToken, ReadableNativeArray jsArguments, int atIndex) {
+            CatalystInstance catalystInstance, ReadableNativeArray jsArguments, int atIndex) {
           return jsArguments.getBoolean(atIndex);
         }
       };
@@ -72,7 +73,7 @@ public abstract class BaseJavaModule implements NativeModule {
       new ArgumentExtractor<Double>() {
         @Override
         public Double extractArgument(
-            CatalystInstance catalystInstance, ExecutorToken executorToken, ReadableNativeArray jsArguments, int atIndex) {
+            CatalystInstance catalystInstance, ReadableNativeArray jsArguments, int atIndex) {
           return jsArguments.getDouble(atIndex);
         }
       };
@@ -81,7 +82,7 @@ public abstract class BaseJavaModule implements NativeModule {
       new ArgumentExtractor<Float>() {
         @Override
         public Float extractArgument(
-            CatalystInstance catalystInstance, ExecutorToken executorToken, ReadableNativeArray jsArguments, int atIndex) {
+            CatalystInstance catalystInstance, ReadableNativeArray jsArguments, int atIndex) {
           return (float) jsArguments.getDouble(atIndex);
         }
       };
@@ -90,7 +91,7 @@ public abstract class BaseJavaModule implements NativeModule {
       new ArgumentExtractor<Integer>() {
         @Override
         public Integer extractArgument(
-            CatalystInstance catalystInstance, ExecutorToken executorToken, ReadableNativeArray jsArguments, int atIndex) {
+            CatalystInstance catalystInstance, ReadableNativeArray jsArguments, int atIndex) {
           return (int) jsArguments.getDouble(atIndex);
         }
       };
@@ -99,7 +100,7 @@ public abstract class BaseJavaModule implements NativeModule {
       new ArgumentExtractor<String>() {
         @Override
         public String extractArgument(
-            CatalystInstance catalystInstance, ExecutorToken executorToken, ReadableNativeArray jsArguments, int atIndex) {
+            CatalystInstance catalystInstance, ReadableNativeArray jsArguments, int atIndex) {
           return jsArguments.getString(atIndex);
         }
       };
@@ -108,7 +109,7 @@ public abstract class BaseJavaModule implements NativeModule {
       new ArgumentExtractor<ReadableNativeArray>() {
         @Override
         public ReadableNativeArray extractArgument(
-            CatalystInstance catalystInstance, ExecutorToken executorToken, ReadableNativeArray jsArguments, int atIndex) {
+            CatalystInstance catalystInstance, ReadableNativeArray jsArguments, int atIndex) {
           return jsArguments.getArray(atIndex);
         }
       };
@@ -117,7 +118,7 @@ public abstract class BaseJavaModule implements NativeModule {
       new ArgumentExtractor<ReadableMap>() {
         @Override
         public ReadableMap extractArgument(
-            CatalystInstance catalystInstance, ExecutorToken executorToken, ReadableNativeArray jsArguments, int atIndex) {
+            CatalystInstance catalystInstance, ReadableNativeArray jsArguments, int atIndex) {
           return jsArguments.getMap(atIndex);
         }
       };
@@ -126,12 +127,12 @@ public abstract class BaseJavaModule implements NativeModule {
       new ArgumentExtractor<Callback>() {
         @Override
         public @Nullable Callback extractArgument(
-            CatalystInstance catalystInstance, ExecutorToken executorToken, ReadableNativeArray jsArguments, int atIndex) {
+            CatalystInstance catalystInstance, ReadableNativeArray jsArguments, int atIndex) {
           if (jsArguments.isNull(atIndex)) {
             return null;
           } else {
             int id = (int) jsArguments.getDouble(atIndex);
-            return new CallbackImpl(catalystInstance, executorToken, id);
+            return new CallbackImpl(catalystInstance, id);
           }
         }
       };
@@ -145,11 +146,11 @@ public abstract class BaseJavaModule implements NativeModule {
 
         @Override
         public Promise extractArgument(
-            CatalystInstance catalystInstance, ExecutorToken executorToken, ReadableNativeArray jsArguments, int atIndex) {
+            CatalystInstance catalystInstance, ReadableNativeArray jsArguments, int atIndex) {
           Callback resolve = ARGUMENT_EXTRACTOR_CALLBACK
-              .extractArgument(catalystInstance, executorToken, jsArguments, atIndex);
+              .extractArgument(catalystInstance, jsArguments, atIndex);
           Callback reject = ARGUMENT_EXTRACTOR_CALLBACK
-              .extractArgument(catalystInstance, executorToken, jsArguments, atIndex + 1);
+              .extractArgument(catalystInstance, jsArguments, atIndex + 1);
           return new PromiseImpl(resolve, reject);
         }
       };
@@ -161,7 +162,6 @@ public abstract class BaseJavaModule implements NativeModule {
     private final Object[] mArguments;
     private String mType = METHOD_TYPE_REMOTE;
     private final int mJSArgumentsNeeded;
-    private final String mTraceName;
 
     public JavaMethod(Method method) {
       mMethod = method;
@@ -171,25 +171,12 @@ public abstract class BaseJavaModule implements NativeModule {
       // save to allocate only one arguments object per method that can be reused across calls
       mArguments = new Object[parameterTypes.length];
       mJSArgumentsNeeded = calculateJSArgumentsNeeded();
-      mTraceName = BaseJavaModule.this.getName() + "." + mMethod.getName();
     }
 
     private ArgumentExtractor[] buildArgumentExtractors(Class[] paramTypes) {
-      // Modules that support web workers are expected to take an ExecutorToken as the first
-      // parameter to all their @ReactMethod-annotated methods. We compensate for that here.
-      int executorTokenOffset = 0;
-      if (BaseJavaModule.this.supportsWebWorkers()) {
-        if (paramTypes[0] != ExecutorToken.class) {
-          throw new RuntimeException(
-              "Module " + BaseJavaModule.this + " supports web workers, but " + mMethod.getName() +
-                  "does not take an ExecutorToken as its first parameter.");
-        }
-        executorTokenOffset = 1;
-      }
-
-      ArgumentExtractor[] argumentExtractors = new ArgumentExtractor[paramTypes.length - executorTokenOffset];
-      for (int i = 0; i < paramTypes.length - executorTokenOffset; i += argumentExtractors[i].getJSArgumentsNeeded()) {
-        Class argumentClass = paramTypes[i + executorTokenOffset];
+      ArgumentExtractor[] argumentExtractors = new ArgumentExtractor[paramTypes.length];
+      for (int i = 0; i < paramTypes.length; i += argumentExtractors[i].getJSArgumentsNeeded()) {
+        Class argumentClass = paramTypes[i];
         if (argumentClass == Boolean.class || argumentClass == boolean.class) {
           argumentExtractors[i] = ARGUMENT_EXTRACTOR_BOOLEAN;
         } else if (argumentClass == Integer.class || argumentClass == int.class) {
@@ -233,10 +220,8 @@ public abstract class BaseJavaModule implements NativeModule {
     }
 
     @Override
-    public void invoke(CatalystInstance catalystInstance, ExecutorToken executorToken, ReadableNativeArray parameters) {
-      SystraceMessage.beginSection(Systrace.TRACE_TAG_REACT_JAVA_BRIDGE, "callJavaModuleMethod")
-          .arg("method", mTraceName)
-          .flush();
+    public void invoke(CatalystInstance catalystInstance, ReadableNativeArray parameters) {
+      Systrace.beginSection(Systrace.TRACE_TAG_REACT_JAVA_BRIDGE, "callJavaModuleMethod");
       try {
         if (mJSArgumentsNeeded != parameters.size()) {
           throw new NativeArgumentsParseException(
@@ -244,18 +229,11 @@ public abstract class BaseJavaModule implements NativeModule {
               parameters.size() + " arguments, expected " + mJSArgumentsNeeded);
         }
 
-        // Modules that support web workers are expected to take an ExecutorToken as the first
-        // parameter to all their @ReactMethod-annotated methods. We compensate for that here.
         int i = 0, jsArgumentsConsumed = 0;
-        int executorTokenOffset = 0;
-        if (BaseJavaModule.this.supportsWebWorkers()) {
-          mArguments[0] = executorToken;
-          executorTokenOffset = 1;
-        }
         try {
           for (; i < mArgumentExtractors.length; i++) {
-            mArguments[i + executorTokenOffset] = mArgumentExtractors[i].extractArgument(
-                catalystInstance, executorToken, parameters, jsArgumentsConsumed);
+            mArguments[i] = mArgumentExtractors[i].extractArgument(
+                catalystInstance, parameters, jsArgumentsConsumed);
             jsArgumentsConsumed += mArgumentExtractors[i].getJSArgumentsNeeded();
           }
         } catch (UnexpectedNativeTypeException e) {
@@ -328,18 +306,20 @@ public abstract class BaseJavaModule implements NativeModule {
   }
 
   @Override
-  public final void writeConstantsField(JsonWriter writer, String fieldName) throws IOException {
+  public final void writeConstantsField(JsonGenerator jg, String fieldName) throws IOException {
     Map<String, Object> constants = getConstants();
     if (constants == null || constants.isEmpty()) {
       return;
     }
 
-    writer.name(fieldName).beginObject();
+    jg.writeObjectFieldStart(fieldName);
     for (Map.Entry<String, Object> constant : constants.entrySet()) {
-      writer.name(constant.getKey());
-      JsonWriterHelper.value(writer, constant.getValue());
+      JsonGeneratorHelper.writeObjectField(
+        jg,
+        constant.getKey(),
+        constant.getValue());
     }
-    writer.endObject();
+    jg.writeEndObject();
   }
 
   @Override
@@ -353,17 +333,7 @@ public abstract class BaseJavaModule implements NativeModule {
   }
 
   @Override
-  public void onReactBridgeInitialized(ReactBridge bridge) {
-    // do nothing
-  }
-
-  @Override
   public void onCatalystInstanceDestroy() {
     // do nothing
-  }
-  
-  @Override
-  public boolean supportsWebWorkers() {
-    return false;
   }
 }

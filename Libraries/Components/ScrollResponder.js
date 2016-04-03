@@ -21,8 +21,8 @@ var UIManager = require('UIManager');
 
 var { ScrollViewManager } = require('NativeModules');
 
-var invariant = require('fbjs/lib/invariant');
-var warning = require('fbjs/lib/warning');
+var invariant = require('invariant');
+var warning = require('warning');
 
 import type ReactComponent from 'ReactComponent';
 
@@ -391,7 +391,7 @@ var ScrollResponderMixin = {
    */
   scrollResponderScrollWithoutAnimationTo: function(offsetX: number, offsetY: number) {
     console.warn('`scrollResponderScrollWithoutAnimationTo` is deprecated. Use `scrollResponderScrollTo` instead');
-    this.scrollResponderScrollTo({x: offsetX, y: offsetY, animated: false});
+    this.scrollResponderScrollTo(offsetX, offsetY, false);
   },
 
   /**

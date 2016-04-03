@@ -50,10 +50,7 @@ module.exports = yeoman.generators.NamedBase.extend({
     utils.copyAndReplace(
       this.templatePath('../../../.flowconfig'),
       this.destinationPath('.flowconfig'),
-      {
-        'Libraries\/react-native\/react-native-interface.js' : 'node_modules/react-native/Libraries/react-native/react-native-interface.js',
-        '^flow/$' : 'node_modules/react-native/flow\nflow/'
-      }
+      { 'Libraries\/react-native\/react-native-interface.js' : 'node_modules/react-native/Libraries/react-native/react-native-interface.js' }
     );
 
     this.fs.copy(
@@ -63,10 +60,6 @@ module.exports = yeoman.generators.NamedBase.extend({
     this.fs.copy(
       this.templatePath('_watchmanconfig'),
       this.destinationPath('.watchmanconfig')
-    );
-    this.fs.copy(
-      this.templatePath('_buckconfig'),
-      this.destinationPath('.buckconfig')
     );
   },
 
@@ -89,13 +82,5 @@ module.exports = yeoman.generators.NamedBase.extend({
         {name: this.name}
       );
     }
-  },
-
-  install: function() {
-    if (this.options.upgrade) {
-      return;
-    }
-
-    this.npmInstall('react', { '--save': true });
   }
 });

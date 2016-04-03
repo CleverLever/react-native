@@ -15,7 +15,6 @@ const getDevToolsMiddleware = require('./middleware/getDevToolsMiddleware');
 const http = require('http');
 const isAbsolutePath = require('absolute-path');
 const loadRawBodyMiddleware = require('./middleware/loadRawBodyMiddleware');
-const messageSocket = require('./util/messageSocket.js');
 const openStackFrameInEditorMiddleware = require('./middleware/openStackFrameInEditorMiddleware');
 const path = require('path');
 const ReactPackager = require('../../packager/react-packager');
@@ -25,13 +24,11 @@ const webSocketProxy = require('./util/webSocketProxy.js');
 
 function runServer(args, config, readyCallback) {
   var wsProxy = null;
-  var ms = null;
   const packagerServer = getPackagerServer(args, config);
   const app = connect()
     .use(loadRawBodyMiddleware)
     .use(connect.compress())
     .use(getDevToolsMiddleware(args, () => wsProxy && wsProxy.isChromeConnected()))
-    .use(getDevToolsMiddleware(args, () => ms && ms.isChromeConnected()))
     .use(openStackFrameInEditorMiddleware)
     .use(statusPageMiddleware)
     .use(systraceProfileMiddleware)
@@ -54,7 +51,6 @@ function runServer(args, config, readyCallback) {
       });
 
       wsProxy = webSocketProxy.attachToServer(serverInstance, '/debugger-proxy');
-      ms = messageSocket.attachToServer(serverInstance, '/message');
       webSocketProxy.attachToServer(serverInstance, '/devtools');
       readyCallback();
     }

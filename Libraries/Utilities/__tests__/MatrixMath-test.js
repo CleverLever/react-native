@@ -9,7 +9,7 @@
 'use strict';
 
 jest.dontMock('MatrixMath');
-jest.dontMock('fbjs/lib/invariant');
+jest.dontMock('invariant');
 
 var MatrixMath = require('MatrixMath');
 

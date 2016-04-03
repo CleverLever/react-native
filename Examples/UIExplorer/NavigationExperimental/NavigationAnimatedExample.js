@@ -1,11 +1,4 @@
 /**
- * Copyright (c) 2013-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
  * The examples provided by Facebook are for non-commercial testing and
  * evaluation purposes only.
  *
@@ -20,57 +13,40 @@
 */
 'use strict';
 
-const React = require('react-native');
-
-const {
-  Animated,
+var React = require('react-native');
+var {
   NavigationExperimental,
   StyleSheet,
   ScrollView,
 } = React;
-
-const  NavigationExampleRow = require('./NavigationExampleRow');
-
-const  {
+var NavigationExampleRow = require('./NavigationExampleRow');
+var {
   AnimatedView: NavigationAnimatedView,
   Card: NavigationCard,
-  Header: NavigationHeader,
-  Reducer: NavigationReducer,
   RootContainer: NavigationRootContainer,
+  Reducer: NavigationReducer,
+  Header: NavigationHeader,
 } = NavigationExperimental;
 
 const NavigationBasicReducer = NavigationReducer.StackReducer({
-  getPushedReducerForAction: (action) => {
-    if (action.type === 'push') {
-      return (state) => state || {key: action.key};
-    }
-    return null;
-  },
-  getReducerForState: (initialState) => (state) => state || initialState,
-  initialState: {
-    key: 'AnimatedExampleStackKey',
-    index: 0,
-    children: [
-      {key: 'First Route'},
-    ],
-  },
+  initialStates: [
+    {key: 'First Route'}
+  ],
+  matchAction: action => true,
+  actionStateMap: actionString => ({key: actionString}),
 });
 
 class NavigationAnimatedExample extends React.Component {
   componentWillMount() {
-    this._renderCard = this._renderCard.bind(this);
-    this._renderHeader = this._renderHeader.bind(this);
-    this._renderNavigation = this._renderNavigation.bind(this);
-    this._renderScene = this._renderScene.bind(this);
-    this._renderTitleComponent = this._renderTitleComponent.bind(this);
+    this._renderNavigated = this._renderNavigated.bind(this);
   }
   render() {
     return (
       <NavigationRootContainer
         reducer={NavigationBasicReducer}
         ref={navRootContainer => { this.navRootContainer = navRootContainer; }}
-        persistenceKey="NavigationAnimExampleState"
-        renderNavigation={this._renderNavigation}
+        persistenceKey="NavigationAnimatedExampleState"
+        renderNavigation={this._renderNavigated}
       />
     );
   }
@@ -80,7 +56,7 @@ class NavigationAnimatedExample extends React.Component {
       this.navRootContainer.handleNavigation(NavigationRootContainer.getBackAction())
     );
   }
-  _renderNavigation(navigationState, onNavigate) {
+  _renderNavigated(navigationState, onNavigate) {
     if (!navigationState) {
       return null;
     }
@@ -88,62 +64,38 @@ class NavigationAnimatedExample extends React.Component {
       <NavigationAnimatedView
         navigationState={navigationState}
         style={styles.animatedView}
-        renderOverlay={this._renderHeader}
-        applyAnimation={(pos, navState) => {
-          Animated.timing(pos, {toValue: navState.index, duration: 500}).start();
-        }}
-        renderScene={this._renderCard}
+        renderOverlay={(position, layout) => (
+          <NavigationHeader
+            navigationState={navigationState}
+            position={position}
+            getTitle={state => state.key}
+          />
+        )}
+        renderScene={(state, index, position, layout) => (
+          <NavigationCard
+            key={state.key}
+            index={index}
+            navigationState={navigationState}
+            position={position}
+            layout={layout}>
+            <ScrollView style={styles.scrollView}>
+              <NavigationExampleRow
+                text={navigationState.children[navigationState.index].key}
+              />
+              <NavigationExampleRow
+                text="Push!"
+                onPress={() => {
+                  onNavigate('Route #' + navigationState.children.length);
+                }}
+              />
+              <NavigationExampleRow
+                text="Exit Animated Nav Example"
+                onPress={this.props.onExampleExit}
+              />
+            </ScrollView>
+          </NavigationCard>
+        )}
       />
-    );
-  }
-
-  _renderHeader(/*NavigationSceneRendererProps*/ props) {
-    return (
-      <NavigationHeader
-        {...props}
-        renderTitleComponent={this._renderTitleComponent}
-      />
-    );
-  }
-
-  _renderTitleComponent(/*NavigationSceneRendererProps*/ props) {
-    return (
-      <NavigationHeader.Title>
-        {props.scene.navigationState.key}
-      </NavigationHeader.Title>
-    );
-  }
-
-  _renderCard(/*NavigationSceneRendererProps*/ props) {
-    return (
-      <NavigationCard
-        {...props}
-        key={'card_' + props.scene.navigationState.key}
-        renderScene={this._renderScene}
-      />
-    );
-  }
-
-  _renderScene(/*NavigationSceneRendererProps*/ props) {
-    return (
-      <ScrollView style={styles.scrollView}>
-        <NavigationExampleRow
-          text={props.scene.navigationState.key}
-        />
-        <NavigationExampleRow
-          text="Push!"
-          onPress={() => {
-            props.onNavigate({
-              type: 'push',
-              key: 'Route #' + props.scenes.length,
-            });
-          }}
-        />
-        <NavigationExampleRow
-          text="Exit Animated Nav Example"
-          onPress={this.props.onExampleExit}
-        />
-      </ScrollView>
     );
   }
 }
@@ -153,7 +105,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollView: {
-    marginTop: NavigationHeader.HEIGHT,
+    marginTop: 64
   },
 });
 

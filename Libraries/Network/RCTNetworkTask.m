@@ -33,7 +33,6 @@
     _request = request;
     _handler = handler;
     _completionBlock = completionBlock;
-    _status = RCTNetworkTaskPending;
   }
   return self;
 }
@@ -56,7 +55,6 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
     if ([self validateRequestToken:[_handler sendRequest:_request
                                             withDelegate:self]]) {
       _selfReference = self;
-      _status = RCTNetworkTaskInProgress;
     }
   }
 }
@@ -68,7 +66,6 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
     [_handler cancelRequest:strongToken];
   }
   [self invalidate];
-  _status = RCTNetworkTaskFinished;
 }
 
 - (BOOL)validateRequestToken:(id)requestToken
@@ -86,9 +83,8 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
     if (_completionBlock) {
       _completionBlock(_response, _data, [NSError errorWithDomain:RCTErrorDomain code:0
         userInfo:@{NSLocalizedDescriptionKey: @"Unrecognized request token."}]);
+      [self invalidate];
     }
-    [self invalidate];
-    _status = RCTNetworkTaskFinished;
     return NO;
   }
   return YES;
@@ -134,9 +130,8 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
   if ([self validateRequestToken:requestToken]) {
     if (_completionBlock) {
       _completionBlock(_response, _data, error);
+      [self invalidate];
     }
-    [self invalidate];
-    _status = RCTNetworkTaskFinished;
   }
 }
 

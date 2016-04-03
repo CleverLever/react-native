@@ -30,20 +30,17 @@ function setupDevtools() {
       },
     },
   };
-  ws.onclose = handleClose;
-  ws.onerror = handleClose;
+  ws.onclose = () => {
+    setTimeout(setupDevtools, 200);
+    closeListeners.forEach(fn => fn());
+  };
+  ws.onerror = error => {
+    setTimeout(setupDevtools, 200);
+    closeListeners.forEach(fn => fn());
+  };
   ws.onopen = function () {
     tryToConnect();
   };
-
-  var hasClosed = false;
-  function handleClose() {
-    if (!hasClosed) {
-      hasClosed = true;
-      setTimeout(setupDevtools, 2000);
-      closeListeners.forEach(fn => fn());
-    }
-  }
 
   function tryToConnect() {
     ws.send('attach:agent');

@@ -13,18 +13,17 @@
  *
  * @flow
  */
+
 'use strict';
 
-const React = require('react-native');
-const {
-  Text,
-  View,
-} = React;
+var React = require('React');
+var Text = require('Text');
+var View = require('View');
 
-class SetPropertiesExampleApp extends React.Component {
+var SetPropertiesExampleApp = React.createClass({
 
-  render() {
-    const wrapperStyle = {
+  render: function() {
+    var wrapperStyle = {
       backgroundColor: this.props.color,
       flex: 1,
       alignItems: 'center',
@@ -38,8 +37,7 @@ class SetPropertiesExampleApp extends React.Component {
         </Text>
       </View>
     );
-  }
-
-}
+  },
+});
 
 module.exports = SetPropertiesExampleApp;

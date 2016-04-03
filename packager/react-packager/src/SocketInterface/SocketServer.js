@@ -136,11 +136,7 @@ class SocketServer {
   _reply(sock, id, type, data) {
     debug('request finished', type);
 
-    try {
-      data = toJSON(data);
-    } catch (e) {
-      console.error('SocketServer exception:', e);
-    }
+    data = toJSON(data);
 
     sock.write(bser.dumpToBuffer({
       id,

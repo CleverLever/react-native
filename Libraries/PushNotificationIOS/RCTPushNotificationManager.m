@@ -36,10 +36,8 @@ NSString *const RCTRemoteNotificationsRegistered = @"RemoteNotificationsRegister
   UILocalNotification *notification = [UILocalNotification new];
   notification.fireDate = [RCTConvert NSDate:details[@"fireDate"]] ?: [NSDate date];
   notification.alertBody = [RCTConvert NSString:details[@"alertBody"]];
-  notification.alertAction = [RCTConvert NSString:details[@"alertAction"]];
   notification.soundName = [RCTConvert NSString:details[@"soundName"]] ?: UILocalNotificationDefaultSoundName;
   notification.userInfo = [RCTConvert NSDictionary:details[@"userInfo"]];
-  notification.category = [RCTConvert NSString:details[@"category"]];
   return notification;
 }
 
@@ -182,6 +180,7 @@ RCT_EXPORT_METHOD(requestPermissions:(NSDictionary *)permissions)
     UIUserNotificationSettings *notificationSettings =
       [UIUserNotificationSettings settingsForTypes:(NSUInteger)types categories:nil];
     [app registerUserNotificationSettings:notificationSettings];
+    [app registerForRemoteNotifications];
   } else {
     [app registerForRemoteNotificationTypes:(NSUInteger)types];
   }

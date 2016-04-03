@@ -20,7 +20,6 @@ var {
   ActionSheetIOS,
   StyleSheet,
   Text,
-  UIManager,
   View,
 } = React;
 
@@ -99,6 +98,7 @@ var ActionSheetTintExample = React.createClass({
   }
 });
 
+
 var ShareActionSheetExample = React.createClass({
   getInitialState() {
     return {
@@ -121,14 +121,16 @@ var ShareActionSheetExample = React.createClass({
 
   showShareActionSheet() {
     ActionSheetIOS.showShareActionSheetWithOptions({
-      url: this.props.url,
+      url: 'https://code.facebook.com',
       message: 'message to go with the shared url',
       subject: 'a subject to go in the email heading',
       excludedActivityTypes: [
         'com.apple.UIKit.activity.PostToTwitter'
       ]
     },
-    (error) => alert(error),
+    (error) => {
+      console.error(error);
+    },
     (success, method) => {
       var text;
       if (success) {
@@ -138,50 +140,6 @@ var ShareActionSheetExample = React.createClass({
       }
       this.setState({text});
     });
-  }
-});
-
-var ShareScreenshotExample = React.createClass({
-  getInitialState() {
-    return {
-      text: ''
-    };
-  },
-
-  render() {
-    return (
-      <View>
-        <Text onPress={this.showShareActionSheet} style={style.button}>
-          Click to show the Share ActionSheet
-        </Text>
-        <Text>
-          {this.state.text}
-        </Text>
-      </View>
-    );
-  },
-
-  showShareActionSheet() {
-    // Take the snapshot (returns a temp file uri)
-    UIManager.takeSnapshot('window').then((uri) => {
-      // Share image data
-      ActionSheetIOS.showShareActionSheetWithOptions({
-        url: uri,
-        excludedActivityTypes: [
-          'com.apple.UIKit.activity.PostToTwitter'
-        ]
-      },
-      (error) => alert(error),
-      (success, method) => {
-        var text;
-        if (success) {
-          text = `Shared via ${method}`;
-        } else {
-          text = 'You didn\'t share';
-        }
-        this.setState({text});
-      });
-    }).catch((error) => alert(error));
   }
 });
 
@@ -205,20 +163,6 @@ exports.examples = [
   },
   {
     title: 'Show Share Action Sheet',
-    render(): ReactElement {
-      return <ShareActionSheetExample url="https://code.facebook.com" />;
-    }
-  },
-  {
-    title: 'Share Local Image',
-    render(): ReactElement {
-      return <ShareActionSheetExample url="bunny.png" />;
-    }
-  },
-  {
-    title: 'Share Screenshot',
-    render(): ReactElement {
-      return <ShareScreenshotExample />;
-    }
+    render(): ReactElement { return <ShareActionSheetExample />; }
   }
 ];

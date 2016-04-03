@@ -23,10 +23,10 @@ var StyleSheet = require('StyleSheet');
 var StyleSheetPropType = require('StyleSheetPropType');
 
 var flattenStyle = require('flattenStyle');
-var invariant = require('fbjs/lib/invariant');
+var invariant = require('invariant');
 var requireNativeComponent = require('requireNativeComponent');
 var resolveAssetSource = require('resolveAssetSource');
-var warning = require('fbjs/lib/warning');
+var warning = require('warning');
 
 var {
   ImageViewManager,
@@ -94,11 +94,6 @@ var Image = React.createClass({
      * @platform ios
      */
     accessibilityLabel: PropTypes.string,
-    /**
-    * blurRadius: the blur radius of the blur filter added to the image
-    * @platform ios
-    */
-    blurRadius: PropTypes.number,
     /**
      * When the image is resized, the corners of the size specified
      * by capInsets will stay a fixed size, but the center content and borders
@@ -211,12 +206,8 @@ var Image = React.createClass({
 
     // This is a workaround for #8243665. RCTNetworkImageView does not support tintColor
     // TODO: Remove this hack once we have one image implementation #8389274
-    if (isNetwork && (tintColor || this.props.blurRadius)) {
+    if (isNetwork && tintColor) {
       RawImage = RCTImageView;
-    }
-
-    if (this.props.src) {
-      console.warn('The <Image> component requires a `source` property rather than `src`.');
     }
 
     if (this.context.isInAParentText) {

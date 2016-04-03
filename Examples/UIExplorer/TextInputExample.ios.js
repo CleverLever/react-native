@@ -97,8 +97,6 @@ var TextEventsExample = React.createClass({
 });
 
 class AutoExpandingTextInput extends React.Component {
-  state: any;
-
   constructor(props) {
     super(props);
     this.state = {text: '', height: 0};
@@ -122,8 +120,6 @@ class AutoExpandingTextInput extends React.Component {
 }
 
 class RewriteExample extends React.Component {
-  state: any;
-
   constructor(props) {
     super(props);
     this.state = {text: ''};
@@ -153,8 +149,6 @@ class RewriteExample extends React.Component {
 }
 
 class RewriteExampleInvalidCharacters extends React.Component {
-  state: any;
-
   constructor(props) {
     super(props);
     this.state = {text: ''};
@@ -176,8 +170,6 @@ class RewriteExampleInvalidCharacters extends React.Component {
 }
 
 class TokenizedTextExample extends React.Component {
-  state: any;
-
   constructor(props) {
     super(props);
     this.state = {text: 'Hello #World'};

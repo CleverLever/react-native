@@ -141,8 +141,17 @@ RCT_EXPORT_MODULE()
   }
 
   if (!_handlers) {
-    // Get handlers, sorted in reverse priority order (highest priority first)
-    _handlers = [[_bridge modulesConformingToProtocol:@protocol(RCTURLRequestHandler)] sortedArrayUsingComparator:^NSComparisonResult(id<RCTURLRequestHandler> a, id<RCTURLRequestHandler> b) {
+
+    // get handlers
+    NSMutableArray<id<RCTURLRequestHandler>> *handlers = [NSMutableArray array];
+    for (Class moduleClass in _bridge.moduleClasses) {
+      if ([moduleClass conformsToProtocol:@protocol(RCTURLRequestHandler)]) {
+        [handlers addObject:[_bridge moduleForClass:moduleClass]];
+      }
+    }
+
+    // Sort handlers in reverse priority order (highest priority first)
+    [handlers sortUsingComparator:^NSComparisonResult(id<RCTURLRequestHandler> a, id<RCTURLRequestHandler> b) {
       float priorityA = [a respondsToSelector:@selector(handlerPriority)] ? [a handlerPriority] : 0;
       float priorityB = [b respondsToSelector:@selector(handlerPriority)] ? [b handlerPriority] : 0;
       if (priorityA > priorityB) {
@@ -153,6 +162,8 @@ RCT_EXPORT_MODULE()
         return NSOrderedSame;
       }
     }];
+
+    _handlers = handlers;
   }
 
   if (RCT_DEBUG) {

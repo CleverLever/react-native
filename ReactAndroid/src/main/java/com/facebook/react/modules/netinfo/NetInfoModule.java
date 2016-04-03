@@ -17,13 +17,15 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.support.v4.net.ConnectivityManagerCompat;
 
+import com.facebook.common.logging.FLog;
+import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.LifecycleEventListener;
-import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeMap;
+import com.facebook.react.common.ReactConstants;
 
 import static com.facebook.react.modules.core.DeviceEventManagerModule.RCTDeviceEventEmitter;
 
@@ -39,9 +41,8 @@ public class NetInfoModule extends ReactContextBaseJavaModule
       "To use NetInfo on Android, add the following to your AndroidManifest.xml:\n" +
       "<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\" />";
 
-  private static final String ERROR_MISSING_PERMISSION = "E_MISSING_PERMISSION";
-
   private final ConnectivityManager mConnectivityManager;
+  private final ConnectivityManagerCompat mConnectivityManagerCompat;
   private final ConnectivityBroadcastReceiver mConnectivityBroadcastReceiver;
   private boolean mNoNetworkPermission = false;
 
@@ -51,6 +52,7 @@ public class NetInfoModule extends ReactContextBaseJavaModule
     super(reactContext);
     mConnectivityManager =
         (ConnectivityManager) reactContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+    mConnectivityManagerCompat = new ConnectivityManagerCompat();
     mConnectivityBroadcastReceiver = new ConnectivityBroadcastReceiver();
   }
 
@@ -79,21 +81,25 @@ public class NetInfoModule extends ReactContextBaseJavaModule
   }
 
   @ReactMethod
-  public void getCurrentConnectivity(Promise promise) {
+  public void getCurrentConnectivity(Callback successCallback, Callback errorCallback) {
     if (mNoNetworkPermission) {
-      promise.reject(ERROR_MISSING_PERMISSION, MISSING_PERMISSION_MESSAGE, null);
+      if (errorCallback == null) {
+        FLog.e(ReactConstants.TAG, MISSING_PERMISSION_MESSAGE);
+        return;
+      }
+      errorCallback.invoke(MISSING_PERMISSION_MESSAGE);
       return;
     }
-    promise.resolve(createConnectivityEventMap());
+    successCallback.invoke(createConnectivityEventMap());
   }
 
   @ReactMethod
-  public void isConnectionMetered(Promise promise) {
+  public void isConnectionMetered(Callback successCallback) {
     if (mNoNetworkPermission) {
-      promise.reject(ERROR_MISSING_PERMISSION, MISSING_PERMISSION_MESSAGE, null);
+      FLog.e(ReactConstants.TAG, MISSING_PERMISSION_MESSAGE);
       return;
     }
-    promise.resolve(ConnectivityManagerCompat.isActiveNetworkMetered(mConnectivityManager));
+    successCallback.invoke(mConnectivityManagerCompat.isActiveNetworkMetered(mConnectivityManager));
   }
 
   private void registerReceiver() {

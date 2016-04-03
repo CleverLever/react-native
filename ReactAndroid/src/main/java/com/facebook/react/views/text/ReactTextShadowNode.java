@@ -14,6 +14,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.content.res.Resources;
 import android.graphics.Typeface;
 import android.text.BoringLayout;
 import android.text.Layout;
@@ -36,11 +37,11 @@ import com.facebook.react.common.annotations.VisibleForTesting;
 import com.facebook.react.uimanager.IllegalViewOperationException;
 import com.facebook.react.uimanager.LayoutShadowNode;
 import com.facebook.react.uimanager.PixelUtil;
+import com.facebook.react.uimanager.annotations.ReactProp;
 import com.facebook.react.uimanager.ReactShadowNode;
 import com.facebook.react.uimanager.UIViewOperationQueue;
 import com.facebook.react.uimanager.ViewDefaults;
 import com.facebook.react.uimanager.ViewProps;
-import com.facebook.react.uimanager.annotations.ReactProp;
 
 /**
  * {@link ReactShadowNode} class for spannable text view.
@@ -93,7 +94,7 @@ public class ReactTextShadowNode extends LayoutShadowNode {
     }
   }
 
-  private static void buildSpannedFromTextCSSNode(
+  private static final void buildSpannedFromTextCSSNode(
       ReactTextShadowNode textCSSNode,
       SpannableStringBuilder sb,
       List<SetSpanOperation> ops) {
@@ -106,14 +107,7 @@ public class ReactTextShadowNode extends LayoutShadowNode {
       if (child instanceof ReactTextShadowNode) {
         buildSpannedFromTextCSSNode((ReactTextShadowNode) child, sb, ops);
       } else if (child instanceof ReactTextInlineImageShadowNode) {
-        // We make the image take up 1 character in the span and put a corresponding character into
-        // the text so that the image doesn't run over any following text.
-        sb.append(INLINE_IMAGE_PLACEHOLDER);
-        ops.add(
-          new SetSpanOperation(
-            sb.length() - INLINE_IMAGE_PLACEHOLDER.length(),
-            sb.length(),
-            ((ReactTextInlineImageShadowNode) child).buildInlineImageSpan()));
+        buildSpannedFromImageNode((ReactTextInlineImageShadowNode) child, sb, ops);
       } else {
         throw new IllegalViewOperationException("Unexpected view type nested under text node: "
                 + child.getClass());
@@ -160,14 +154,36 @@ public class ReactTextShadowNode extends LayoutShadowNode {
     }
   }
 
-  protected static Spannable fromTextCSSNode(ReactTextShadowNode textCSSNode) {
+  private static final void buildSpannedFromImageNode(
+      ReactTextInlineImageShadowNode node,
+      SpannableStringBuilder sb,
+      List<SetSpanOperation> ops) {
+    int start = sb.length();
+    // Create our own internal ImageSpan which will allow us to correctly layout the Image
+    Resources resources = node.getThemedContext().getResources();
+    int height = (int) Math.ceil(node.getStyleHeight());
+    int width = (int) Math.ceil(node.getStyleWidth());
+    TextInlineImageSpan imageSpan = new TextInlineImageSpan(
+        resources,
+        height,
+        width,
+        node.getUri(),
+        node.getDraweeControllerBuilder(),
+        node.getCallerContext());
+    // We make the image take up 1 character in the span and put a corresponding character into the
+    // text so that the image doesn't run over any following text.
+    sb.append(INLINE_IMAGE_PLACEHOLDER);
+    ops.add(new SetSpanOperation(start, sb.length(), imageSpan));
+  }
+
+  protected static final Spannable fromTextCSSNode(ReactTextShadowNode textCSSNode) {
     SpannableStringBuilder sb = new SpannableStringBuilder();
     // TODO(5837930): Investigate whether it's worth optimizing this part and do it if so
 
     // The {@link SpannableStringBuilder} implementation require setSpan operation to be called
     // up-to-bottom, otherwise all the spannables that are withing the region for which one may set
     // a new spannable will be wiped out
-    List<SetSpanOperation> ops = new ArrayList<>();
+    List<SetSpanOperation> ops = new ArrayList<SetSpanOperation>();
     buildSpannedFromTextCSSNode(textCSSNode, sb, ops);
     if (textCSSNode.mFontSize == UNSET) {
       sb.setSpan(
@@ -205,12 +221,8 @@ public class ReactTextShadowNode extends LayoutShadowNode {
           float desiredWidth = boring == null ?
               Layout.getDesiredWidth(text, textPaint) : Float.NaN;
 
-          // technically, width should never be negative, but there is currently a bug in
-          // LayoutEngine where a negative value can be passed.
-          boolean unconstrainedWidth = CSSConstants.isUndefined(width) || width < 0;
-
           if (boring == null &&
-              (unconstrainedWidth ||
+              (CSSConstants.isUndefined(width) ||
                   (!CSSConstants.isUndefined(desiredWidth) && desiredWidth <= width))) {
             // Is used when the width is not known and the text is not boring, ie. if it contains
             // unicode characters.
@@ -222,7 +234,7 @@ public class ReactTextShadowNode extends LayoutShadowNode {
                 1,
                 0,
                 true);
-          } else if (boring != null && (unconstrainedWidth || boring.width <= width)) {
+          } else if (boring != null && (CSSConstants.isUndefined(width) || boring.width <= width)) {
             // Is used for single-line, boring text when the width is either unknown or bigger
             // than the width of the text.
             layout = BoringLayout.make(
@@ -317,13 +329,6 @@ public class ReactTextShadowNode extends LayoutShadowNode {
   private final boolean mIsVirtual;
 
   protected boolean mContainsImages = false;
-
-  public ReactTextShadowNode(boolean isVirtual) {
-    mIsVirtual = isVirtual;
-    if (!isVirtual) {
-      setMeasureFunction(TEXT_MEASURE_FUNCTION);
-    }
-  }
 
   @Override
   public void onBeforeLayout() {
@@ -476,6 +481,13 @@ public class ReactTextShadowNode extends LayoutShadowNode {
       ReactTextUpdate reactTextUpdate =
           new ReactTextUpdate(mPreparedSpannableText, UNSET, mContainsImages);
       uiViewOperationQueue.enqueueUpdateExtraData(getReactTag(), reactTextUpdate);
+    }
+  }
+
+  public ReactTextShadowNode(boolean isVirtual) {
+    mIsVirtual = isVirtual;
+    if (!isVirtual) {
+      setMeasureFunction(TEXT_MEASURE_FUNCTION);
     }
   }
 }

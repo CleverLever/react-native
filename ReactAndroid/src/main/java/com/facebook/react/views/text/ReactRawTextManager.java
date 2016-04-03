@@ -10,6 +10,7 @@
 package com.facebook.react.views.text;
 
 import com.facebook.react.common.annotations.VisibleForTesting;
+import com.facebook.react.uimanager.ReactStylesDiffMap;
 import com.facebook.react.uimanager.ThemedReactContext;
 
 /**

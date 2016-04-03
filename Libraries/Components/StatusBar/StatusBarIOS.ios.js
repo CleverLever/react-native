@@ -11,31 +11,33 @@
  */
 'use strict';
 
-const StatusBar = require('StatusBar');
+var RCTStatusBarManager = require('NativeModules').StatusBarManager;
 
-import type {StatusBarStyle, StatusBarAnimation} from 'StatusBar';
+type StatusBarStyle = $Enum<{
+  'default': string,
+  'light-content': string,
+}>;
 
-/**
- * Deprecated. Use `StatusBar` instead.
- */
-const StatusBarIOS = {
+type StatusBarAnimation = $Enum<{
+  'none': string,
+  'fade': string,
+  'slide': string,
+}>;
+
+var StatusBarIOS = {
 
   setStyle(style: StatusBarStyle, animated?: boolean) {
-    console.warn('`StatusBarIOS.setStyle` is deprecated. Use `StatusBar.setBarStyle` instead.');
-    StatusBar.setBarStyle(style, animated);
+    animated = animated || false;
+    RCTStatusBarManager.setStyle(style, animated);
   },
 
   setHidden(hidden: boolean, animation?: StatusBarAnimation) {
-    console.warn('`StatusBarIOS.setHidden` is deprecated. Use `StatusBar.setHidden` instead.');
-    StatusBar.setHidden(hidden, animation);
+    animation = animation || 'none';
+    RCTStatusBarManager.setHidden(hidden, animation);
   },
 
   setNetworkActivityIndicatorVisible(visible: boolean) {
-    console.warn(
-      '`StatusBarIOS.setNetworkActivityIndicatorVisible` is deprecated. ' +
-      'Use `StatusBar.setNetworkActivityIndicatorVisible` instead.'
-    );
-    StatusBar.setNetworkActivityIndicatorVisible(visible);
+    RCTStatusBarManager.setNetworkActivityIndicatorVisible(visible);
   },
 };
 

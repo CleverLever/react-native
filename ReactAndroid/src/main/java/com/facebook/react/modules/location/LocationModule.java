@@ -280,7 +280,7 @@ public class LocationModule extends ReactContextBaseJavaModule {
 
     public void invoke() {
       mLocationManager.requestSingleUpdate(mProvider, mLocationListener, null);
-      mHandler.postDelayed(mTimeoutRunnable, mTimeout);
+      mHandler.postDelayed(mTimeoutRunnable, SystemClock.currentTimeMillis() + mTimeout);
     }
   }
 }

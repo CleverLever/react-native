@@ -20,21 +20,18 @@
 import type {
   NavigationState,
   NavigationReducer
-} from 'NavigationTypeDefinition';
+} from 'NavigationState';
 
-function NavigationFindReducer(
-  reducers: Array<NavigationReducer>,
-  defaultState: NavigationState,
-): NavigationReducer {
-  return function(lastState: ?NavigationState, action: ?any): NavigationState {
+function NavigationFindReducer(reducers: Array<NavigationReducer>): NavigationReducer {
+  return function(lastState: ?NavigationState, action: ?any): ?NavigationState {
     for (let i = 0; i < reducers.length; i++) {
       let reducer = reducers[i];
       let newState = reducer(lastState, action);
       if (newState !== lastState) {
-        return newState || defaultState;
+        return newState;
       }
     }
-    return lastState || defaultState;
+    return lastState;
   };
 }
 

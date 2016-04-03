@@ -12,11 +12,7 @@ package com.facebook.react.views.scroll;
 import javax.annotation.Nullable;
 
 import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Rect;
-import android.graphics.drawable.ColorDrawable;
-import android.graphics.drawable.Drawable;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.HorizontalScrollView;
@@ -42,8 +38,6 @@ public class ReactHorizontalScrollView extends HorizontalScrollView implements
   private boolean mRemoveClippedSubviews;
   private boolean mScrollEnabled = true;
   private boolean mSendMomentumEvents;
-  private @Nullable Drawable mEndBackground;
-  private int mEndFillColor = Color.TRANSPARENT;
 
   public ReactHorizontalScrollView(Context context) {
     super(context);
@@ -190,24 +184,5 @@ public class ReactHorizontalScrollView extends HorizontalScrollView implements
   @Override
   public void getClippingRect(Rect outClippingRect) {
     outClippingRect.set(Assertions.assertNotNull(mClippingRect));
-  }
-
-  public void setEndFillColor(int color) {
-    if (color != mEndFillColor) {
-      mEndFillColor = color;
-      mEndBackground = new ColorDrawable(mEndFillColor);
-    }
-  }
-
-  @Override
-  public void draw(Canvas canvas) {
-    if (mEndFillColor != Color.TRANSPARENT) {
-      final View content = getChildAt(0);
-      if (mEndBackground != null && content != null && content.getRight() < getWidth()) {
-        mEndBackground.setBounds(content.getRight(), 0, getWidth(), getHeight());
-        mEndBackground.draw(canvas);
-      }
-    }
-    super.draw(canvas);
   }
 }

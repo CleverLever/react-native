@@ -82,7 +82,6 @@ public class MessageQueueThreadImpl implements MessageQueueThread {
   /**
    * @return whether the current Thread is also the Thread associated with this MessageQueueThread.
    */
-  @DoNotStrip
   @Override
   public boolean isOnThread() {
     return mLooper.getThread() == Thread.currentThread();
@@ -92,7 +91,6 @@ public class MessageQueueThreadImpl implements MessageQueueThread {
    * Asserts {@link #isOnThread()}, throwing a {@link AssertionException} (NOT an
    * {@link AssertionError}) if the assertion fails.
    */
-  @DoNotStrip
   @Override
   public void assertIsOnThread() {
     SoftAssertions.assertCondition(isOnThread(), mAssertionErrorMessage);
@@ -102,7 +100,6 @@ public class MessageQueueThreadImpl implements MessageQueueThread {
    * Quits this queue's Looper. If that Looper was running on a different Thread than the current
    * Thread, also waits for the last message being processed to finish and the Thread to die.
    */
-  @DoNotStrip
   @Override
   public void quitSynchronous() {
     mIsFinished = true;

@@ -19,7 +19,6 @@
 #import "RCTRootView.h"
 #import "RCTSourceCode.h"
 #import "RCTUtils.h"
-#import "RCTWebSocketProxy.h"
 
 #if RCT_DEV
 
@@ -118,7 +117,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
 
 @end
 
-@interface RCTDevMenu () <RCTBridgeModule, UIActionSheetDelegate, RCTInvalidating, RCTWebSocketProxyDelegate>
+@interface RCTDevMenu () <RCTBridgeModule, UIActionSheetDelegate, RCTInvalidating>
 
 @property (nonatomic, strong) Class executorClass;
 
@@ -195,7 +194,6 @@ RCT_EXPORT_MODULE()
     // Delay setup until after Bridge init
     dispatch_async(dispatch_get_main_queue(), ^{
       [weakSelf updateSettings:_settings];
-      [weakSelf connectPackager];
     });
 
 #if TARGET_IPHONE_SIMULATOR
@@ -228,57 +226,6 @@ RCT_EXPORT_MODULE()
 
   }
   return self;
-}
-
-- (NSURL *)packagerURL
-{
-  NSString *host = [_bridge.bundleURL host];
-  if (!host) {
-    return nil;
-  }
-
-  NSString *scheme = [_bridge.bundleURL scheme];
-  NSNumber *port = [_bridge.bundleURL port];
-  if (!port) {
-    port = @8081; // Packager default port
-  }
-  return [NSURL URLWithString:[NSString stringWithFormat:@"%@://%@:%@/message?role=shell", scheme, host, port]];
-}
-
-// TODO: Move non-UI logic into separate RCTDevSettings module
-- (void)connectPackager
-{
-  Class webSocketManagerClass = NSClassFromString(@"RCTWebSocketManager");
-  id<RCTWebSocketProxy> webSocketManager = (id <RCTWebSocketProxy>)[webSocketManagerClass sharedInstance];
-  NSURL *url = [self packagerURL];
-  if (url) {
-    [webSocketManager setDelegate:self forURL:url];
-  }
-}
-
-- (BOOL)isSupportedVersion:(NSNumber *)version
-{
-  NSArray<NSNumber *> *const kSupportedVersions = @[ @1 ];
-  return [kSupportedVersions containsObject:version];
-}
-
-- (void)socketProxy:(__unused id<RCTWebSocketProxy>)sender didReceiveMessage:(NSDictionary<NSString *, id> *)message
-{
-  if ([self isSupportedVersion:message[@"version"]]) {
-    [self processTarget:message[@"target"] action:message[@"action"] options:message[@"options"]];
-  }
-}
-
-- (void)processTarget:(NSString *)target action:(NSString *)action options:(NSDictionary<NSString *, id> *)options
-{
-  if ([target isEqualToString:@"bridge"]) {
-    if ([action isEqualToString:@"reload"]) {
-      if ([options[@"debug"] boolValue]) {
-        _bridge.executorClass = NSClassFromString(@"RCTWebSocketExecutor");
-      }
-      [_bridge reload];
-    }
-  }
 }
 
 - (dispatch_queue_t)methodQueue
@@ -372,7 +319,7 @@ RCT_EXPORT_MODULE()
   if (!sourceCodeModule.scriptURL) {
     if (!sourceCodeModule) {
       RCTLogWarn(@"RCTSourceCode module not found");
-    } else if (!RCTRunningInTestEnvironment()) {
+    } else {
       RCTLogWarn(@"RCTSourceCode module scriptURL has not been set");
     }
   } else if (!sourceCodeModule.scriptURL.fileURL) {
@@ -475,7 +422,7 @@ RCT_EXPORT_MODULE()
   }
 
   if ([self hotLoadingAvailable]) {
-    NSString *hotLoadingTitle = _hotLoadingEnabled ? @"Disable Hot Reloading" : @"Enable Hot Reloading";
+    NSString *hotLoadingTitle = _hotLoadingEnabled ? @"Disable Hot Loading" : @"Enable Hot Loading";
     [items addObject:[RCTDevMenuItem buttonItemWithTitle:hotLoadingTitle handler:^{
       weakSelf.hotLoadingEnabled = !_hotLoadingEnabled;
     }]];
@@ -544,9 +491,7 @@ RCT_EXPORT_METHOD(show)
 
 RCT_EXPORT_METHOD(reload)
 {
-  [[NSNotificationCenter defaultCenter] postNotificationName:RCTReloadNotification
-                                                      object:nil
-                                                    userInfo:nil];
+  [_bridge reload];
 }
 
 - (void)setShakeToShow:(BOOL)shakeToShow
@@ -586,7 +531,9 @@ RCT_EXPORT_METHOD(reload)
 
 - (BOOL)hotLoadingAvailable
 {
-  return _bridge.bundleURL && !_bridge.bundleURL.fileURL; // Only works when running from server
+  return !_bridge.bundleURL.fileURL // Only works when running from server
+  && [_bridge.delegate respondsToSelector:@selector(bridgeSupportsHotLoading:)]
+  && [_bridge.delegate bridgeSupportsHotLoading:_bridge];
 }
 
 - (void)setHotLoadingEnabled:(BOOL)enabled

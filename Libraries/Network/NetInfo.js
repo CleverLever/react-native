@@ -16,7 +16,6 @@ const NativeModules = require('NativeModules');
 const Platform = require('Platform');
 const RCTDeviceEventEmitter = require('RCTDeviceEventEmitter');
 const RCTNetInfo = NativeModules.NetInfo;
-const deprecatedCallback = require('deprecatedCallback');
 
 const DEVICE_CONNECTIVITY_EVENT = 'networkStatusDidChange';
 
@@ -136,12 +135,8 @@ const _isConnectedSubscriptions = new Map();
  * monetary costs, data limitations or battery/performance issues.
  *
  * ```
- * NetInfo.isConnectionExpensive()
- * .then(isConnectionExpensive => {
+ * NetInfo.isConnectionExpensive((isConnectionExpensive) => {
  *   console.log('Connection is ' + (isConnectionExpensive ? 'Expensive' : 'Not Expensive'));
- * })
- * .catch(error => {
- *   console.error(error);
  * });
  * ```
  *
@@ -151,7 +146,7 @@ const _isConnectedSubscriptions = new Map();
  * internet connectivity.
  *
  * ```
- * NetInfo.isConnected.fetch().then(isConnected => {
+ * NetInfo.isConnected.fetch().done((isConnected) => {
  *   console.log('First, is ' + (isConnected ? 'online' : 'offline'));
  * });
  * function handleFirstConnectivityChange(isConnected) {
@@ -197,7 +192,14 @@ const NetInfo = {
   },
 
   fetch(): Promise {
-    return RCTNetInfo.getCurrentConnectivity().then(resp => resp.network_info);
+    return new Promise((resolve, reject) => {
+      RCTNetInfo.getCurrentConnectivity(
+        function(resp) {
+          resolve(resp.network_info);
+        },
+        reject
+      );
+    });
   },
 
   isConnected: {
@@ -222,7 +224,6 @@ const NetInfo = {
       eventName: ChangeEventName,
       handler: Function
     ): void {
-      /* $FlowFixMe */
       const listener = _isConnectedSubscriptions.get(handler);
       NetInfo.removeEventListener(
         eventName,
@@ -238,13 +239,15 @@ const NetInfo = {
     },
   },
 
-  isConnectionExpensive(): Promise {
-    return deprecatedCallback(
-      Platform.OS === 'android' ? RCTNetInfo.isConnectionMetered() : Promise.reject(new Error('Currently not supported on iOS')),
-      Array.prototype.slice.call(arguments),
-      'single-callback-value-first',
-      'NetInfo.isConnectionMetered(callback) is deprecated. Use the returned Promise instead.'
-    );
+  isConnectionExpensive(callback: (metered: ?boolean, error?: string) => void): void {
+    if (Platform.OS === 'android') {
+      RCTNetInfo.isConnectionMetered((_isMetered) => {
+        callback(_isMetered);
+      });
+    } else {
+      // TODO t9296080 consider polyfill and more features later on
+      callback(null, "Unsupported");
+    }
   },
 };
 

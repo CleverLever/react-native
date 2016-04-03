@@ -13,18 +13,16 @@
 
 const NavigationAnimatedView = require('NavigationAnimatedView');
 const NavigationCard = require('NavigationCard');
-const NavigationCardStack = require('NavigationCardStack');
 const NavigationContainer = require('NavigationContainer');
 const NavigationHeader = require('NavigationHeader');
-const NavigationLegacyNavigator = require('NavigationLegacyNavigator');
-const NavigationReducer = require('NavigationReducer');
 const NavigationRootContainer = require('NavigationRootContainer');
-const NavigationStateUtils = require('NavigationStateUtils');
+const NavigationReducer = require('NavigationReducer');
+const NavigationState = require('NavigationState');
 const NavigationView = require('NavigationView');
 
 const NavigationExperimental = {
   // Core
-  StateUtils: NavigationStateUtils,
+  State: NavigationState,
   Reducer: NavigationReducer,
 
   // Containers
@@ -36,10 +34,8 @@ const NavigationExperimental = {
   AnimatedView: NavigationAnimatedView,
 
   // CustomComponents:
-  Card: NavigationCard,
-  CardStack: NavigationCardStack,
   Header: NavigationHeader,
-  LegacyNavigator: NavigationLegacyNavigator,
+  Card: NavigationCard,
 };
 
 module.exports = NavigationExperimental;

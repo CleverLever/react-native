@@ -74,10 +74,8 @@
 
 - (void)setTextStorage:(NSTextStorage *)textStorage
 {
-  if (_textStorage != textStorage) {
-    _textStorage = textStorage;
-    [self setNeedsDisplay];
-  }
+  _textStorage = textStorage;
+  [self setNeedsDisplay];
 }
 
 - (void)drawRect:(CGRect)rect

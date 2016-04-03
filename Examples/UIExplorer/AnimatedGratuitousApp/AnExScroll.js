@@ -12,7 +12,6 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  * @providesModule AnExScroll
- * @flow
  */
 'use strict';
 
@@ -27,7 +26,12 @@ var {
 } = React;
 
 class AnExScroll extends React.Component {
-  state: any = { scrollX: new Animated.Value(0) };
+  constructor(props) {
+    super(props);
+    this.state = {
+      scrollX: new Animated.Value(0),
+    };
+  }
 
   render() {
     var width = this.props.panelWidth;

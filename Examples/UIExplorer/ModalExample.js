@@ -19,7 +19,7 @@ var React = require('react-native');
 var {
   Modal,
   StyleSheet,
-  Switch,
+  SwitchIOS,
   Text,
   TouchableHighlight,
   View,
@@ -96,9 +96,7 @@ var ModalExample = React.createClass({
         <Modal
           animated={this.state.animated}
           transparent={this.state.transparent}
-          visible={this.state.modalVisible}
-          onRequestClose={() => {this._setModalVisible(false)}}
-          >
+          visible={this.state.modalVisible}>
           <View style={[styles.container, modalBackgroundStyle]}>
             <View style={[styles.innerContainer, innerContainerTransparentStyle]}>
               <Text>This modal was presented {this.state.animated ? 'with' : 'without'} animation.</Text>
@@ -113,12 +111,12 @@ var ModalExample = React.createClass({
 
         <View style={styles.row}>
           <Text style={styles.rowTitle}>Animated</Text>
-          <Switch value={this.state.animated} onValueChange={this._toggleAnimated} />
+          <SwitchIOS value={this.state.animated} onValueChange={this._toggleAnimated} />
         </View>
 
         <View style={styles.row}>
           <Text style={styles.rowTitle}>Transparent</Text>
-          <Switch value={this.state.transparent} onValueChange={this._toggleTransparent} />
+          <SwitchIOS value={this.state.transparent} onValueChange={this._toggleTransparent} />
         </View>
 
         <Button onPress={this._setModalVisible.bind(this, true)}>

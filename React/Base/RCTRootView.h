@@ -84,6 +84,13 @@ extern NSString *const RCTContentDidAppearNotification;
 @property (nonatomic, copy, readwrite) NSDictionary *appProperties;
 
 /**
+ * The class of the RCTJavaScriptExecutor to use with this view.
+ * If not specified, it will default to using RCTJSCExecutor.
+ * Changes will take effect next time the bundle is reloaded.
+ */
+@property (nonatomic, strong) Class executorClass;
+
+/**
  * The size flexibility mode of the root view.
  */
 @property (nonatomic, assign) RCTRootViewSizeFlexibility sizeFlexibility;

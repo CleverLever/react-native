@@ -12,8 +12,8 @@
 
 var BatchedBridge = require('BatchedBridge');
 
-var warning = require('fbjs/lib/warning');
-var invariant = require('fbjs/lib/invariant');
+var warning = require('warning');
+var invariant = require('invariant');
 
 var LoggingTestModule = {
   logToConsole: function(str) {

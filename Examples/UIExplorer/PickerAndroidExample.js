@@ -44,6 +44,8 @@ const PickerExample = React.createClass({
     };
   },
 
+  displayName: 'Android Picker',
+
   render: function() {
     return (
       <UIExplorerPage title="<Picker>">

@@ -4,7 +4,6 @@ include_defs('//ReactAndroid/DEFS')
 SUPPORTED_PLATFORMS = '^android-(armv7|x86)$'
 
 DEPS = [
-  FBGLOGINIT_TARGET,
   '//native/jni:jni',
   '//native/third-party/android-ndk:android',
   '//xplat/folly:molly',
@@ -16,17 +15,10 @@ def jni_library(**kwargs):
     visibility = [
       'PUBLIC',
     ],
-    deps = DEPS + JSC_DEPS + [
+    deps = DEPS + [
       react_native_target('jni/react:react'),
-    ],
-    **kwargs
-  )
-
-  cxx_library(
-    name='jni-internal',
-    visibility = [INTERNAL_APP],
-    deps = DEPS + JSC_INTERNAL_DEPS + [
-      react_native_target('jni/react:react-internal'),
+      '//native/third-party/jsc:jsc',
+      '//native/third-party/jsc:jsc_legacy_profiler',
     ],
     **kwargs
   )
@@ -36,7 +28,6 @@ jni_library(
   header_namespace = 'react/jni',
   supported_platforms_regex = SUPPORTED_PLATFORMS,
   srcs = [
-    'JExecutorToken.cpp',
     'JMessageQueueThread.cpp',
     'JSCPerfLogging.cpp',
     'JSLoader.cpp',
@@ -48,14 +39,12 @@ jni_library(
   ],
   headers = [
     'JSLoader.h',
-    'JExecutorToken.h',
-    'JExecutorTokenFactory.h',
+    'ProxyExecutor.h',
     'JMessageQueueThread.h',
     'JNativeRunnable.h',
     'JniJSModulesUnbundle.h',
     'JSCPerfLogging.h',
     'JSLogging.h',
-    'ProxyExecutor.h',
     'WebWorkers.h',
   ],
   exported_headers = [

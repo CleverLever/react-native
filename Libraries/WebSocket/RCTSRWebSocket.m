@@ -48,27 +48,8 @@ typedef struct {
 
 static NSString *const RCTSRWebSocketAppendToSecKeyString = @"258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-//#define RCTSR_ENABLE_LOG
-#ifdef RCTSR_ENABLE_LOG
-#define RCTSRLog(format...) RCTLogInfo(format)
-#else
-#define RCTSRLog(...) do { } while (0)
-#endif
-
-// This is a hack, and probably not optimal
-static inline int32_t validate_dispatch_data_partial_string(NSData *data)
-{
-  static const int maxCodepointSize = 3;
-
-  for (int i = 0; i < maxCodepointSize; i++) {
-    NSString *str = [[NSString alloc] initWithBytesNoCopy:(char *)data.bytes length:data.length - i encoding:NSUTF8StringEncoding freeWhenDone:NO];
-    if (str) {
-      return (int32_t)data.length - i;
-    }
-  }
-
-  return -1;
-}
+static inline int32_t validate_dispatch_data_partial_string(NSData *data);
+static inline void RCTSRFastLog(NSString *format, ...);
 
 @interface NSData (RCTSRWebSocket)
 
@@ -253,6 +234,7 @@ typedef void (^data_callback)(RCTSRWebSocket *webSocket,  NSData *data);
   __strong RCTSRWebSocket *_selfRetain;
 
   NSArray<NSString *> *_requestedProtocols;
+  NSDictionary<NSString *, NSString *> *_requestedOptions;
   RCTSRIOConsumerPool *_consumerPool;
 }
 
@@ -263,7 +245,7 @@ static __strong NSData *CRLFCRLF;
   CRLFCRLF = [[NSData alloc] initWithBytes:"\r\n\r\n" length:4];
 }
 
-- (instancetype)initWithURLRequest:(NSURLRequest *)request protocols:(NSArray<NSString *> *)protocols
+- (instancetype)initWithURLRequest:(NSURLRequest *)request protocols:(NSArray<NSString *> *)protocols options:(NSDictionary<NSString *, NSString *> *)options
 {
   RCTAssertParam(request);
 
@@ -272,6 +254,7 @@ static __strong NSData *CRLFCRLF;
     _urlRequest = request;
 
     _requestedProtocols = [protocols copy];
+    _requestedOptions = [options copy];
 
     [self _RCTSR_commonInit];
   }
@@ -282,15 +265,20 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
 
 - (instancetype)initWithURLRequest:(NSURLRequest *)request;
 {
-  return [self initWithURLRequest:request protocols:nil];
+  return [self initWithURLRequest:request protocols:nil options: nil];
 }
 
 - (instancetype)initWithURL:(NSURL *)URL;
 {
-  return [self initWithURL:URL protocols:nil];
+  return [self initWithURL:URL protocols:nil options:nil];
 }
 
 - (instancetype)initWithURL:(NSURL *)URL protocols:(NSArray<NSString *> *)protocols;
+{
+  return [self initWithURL:URL protocols:protocols options:nil];
+}
+
+- (instancetype)initWithURL:(NSURL *)URL protocols:(NSArray<NSString *> *)protocols options:(NSDictionary<NSString *, id> *)options
 {
   NSMutableURLRequest *request;
   if (URL) {
@@ -309,7 +297,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
     NSArray<NSHTTPCookie *> *cookies = [[NSHTTPCookieStorage sharedHTTPCookieStorage] cookiesForURL:components.URL];
     [request setAllHTTPHeaderFields:[NSHTTPCookie requestHeaderFieldsWithCookies:cookies]];
   }
-  return [self initWithURLRequest:request protocols:protocols];
+  return [self initWithURLRequest:request protocols:protocols options:options];
 }
 
 - (void)_RCTSR_commonInit;
@@ -325,7 +313,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
   _consumerStopped = YES;
   _webSocketVersion = 13;
 
-  _workQueue = dispatch_queue_create("com.facebook.react.SRWebSocket", DISPATCH_QUEUE_SERIAL);
+  _workQueue = dispatch_queue_create(NULL, DISPATCH_QUEUE_SERIAL);
 
   // Going to set a specific on the queue so we can validate we're on the work queue
   dispatch_queue_set_specific(_workQueue, (__bridge void *)self, (__bridge void *)_workQueue, NULL);
@@ -430,7 +418,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
   NSInteger responseCode = CFHTTPMessageGetResponseStatusCode(_receivedHTTPHeaders);
 
   if (responseCode >= 400) {
-    RCTSRLog(@"Request failed with response code %ld", responseCode);
+    RCTSRFastLog(@"Request failed with response code %d", responseCode);
     [self _failWithError:[NSError errorWithDomain:RCTSRWebSocketErrorDomain code:2132 userInfo:@{NSLocalizedDescriptionKey:[NSString stringWithFormat:@"received bad response code from server %ld", (long)responseCode], RCTSRHTTPResponseErrorKey:@(responseCode)}]];
     return;
   }
@@ -474,7 +462,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
     CFHTTPMessageAppendBytes(_receivedHTTPHeaders, (const UInt8 *)data.bytes, data.length);
 
     if (CFHTTPMessageIsHeaderComplete(_receivedHTTPHeaders)) {
-      RCTSRLog(@"Finished reading headers %@", CFBridgingRelease(CFHTTPMessageCopyAllHeaderFields(_receivedHTTPHeaders)));
+      RCTSRFastLog(@"Finished reading headers %@", CFBridgingRelease(CFHTTPMessageCopyAllHeaderFields(_receivedHTTPHeaders)));
       [socket _HTTPHeadersDidFinish];
     } else {
       [socket _readHTTPHeader];
@@ -484,7 +472,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
 
 - (void)didConnect
 {
-  RCTSRLog(@"Connected");
+  RCTSRFastLog(@"Connected");
   CFHTTPMessageRef request = CFHTTPMessageCreateRequest(NULL, CFSTR("GET"), (__bridge CFURLRef)_url, kCFHTTPVersion1_1);
 
   // Set host first so it defaults
@@ -500,11 +488,11 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
   CFHTTPMessageSetHeaderFieldValue(request, CFSTR("Sec-WebSocket-Key"), (__bridge CFStringRef)_secKey);
   CFHTTPMessageSetHeaderFieldValue(request, CFSTR("Sec-WebSocket-Version"), (__bridge CFStringRef)[NSString stringWithFormat:@"%ld", (long)_webSocketVersion]);
 
-  CFHTTPMessageSetHeaderFieldValue(request, CFSTR("Origin"), (__bridge CFStringRef)_url.RCTSR_origin);
-
   if (_requestedProtocols) {
     CFHTTPMessageSetHeaderFieldValue(request, CFSTR("Sec-WebSocket-Protocol"), (__bridge CFStringRef)[_requestedProtocols componentsJoinedByString:@", "]);
   }
+
+  CFHTTPMessageSetHeaderFieldValue(request, CFSTR("Origin"), (__bridge CFStringRef)(_requestedOptions[@"origin"] ?: _url.RCTSR_origin));
 
   [_urlRequest.allHTTPHeaderFields enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
     CFHTTPMessageSetHeaderFieldValue(request, (__bridge CFStringRef)key, (__bridge CFStringRef)obj);
@@ -606,7 +594,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
 
     self.readyState = RCTSR_CLOSING;
 
-    RCTSRLog(@"Closing with code %ld reason %@", code, reason);
+    RCTSRFastLog(@"Closing with code %d reason %@", code, reason);
 
     if (wasConnecting) {
       [self _disconnect];
@@ -663,7 +651,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
       self.readyState = RCTSR_CLOSED;
       _selfRetain = nil;
 
-      RCTSRLog(@"Failing with error %@", error.localizedDescription);
+      RCTSRFastLog(@"Failing with error %@", error.localizedDescription);
 
       [self _disconnect];
     }
@@ -721,7 +709,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
 
 - (void)handlePong:(NSData *)pongData;
 {
-  RCTSRLog(@"Received pong");
+  RCTSRFastLog(@"Received pong");
   [self _performDelegateBlock:^{
     if ([self.delegate respondsToSelector:@selector(webSocket:didReceivePong:)]) {
       [self.delegate webSocket:self didReceivePong:pongData];
@@ -731,7 +719,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)init)
 
 - (void)_handleMessage:(id)message
 {
-  RCTSRLog(@"Received message");
+  RCTSRFastLog(@"Received message");
   [self _performDelegateBlock:^{
     [self.delegate webSocket:self didReceiveMessage:message];
   }];
@@ -777,7 +765,7 @@ static inline BOOL closeCodeIsValid(int closeCode)
   size_t dataSize = data.length;
   __block uint16_t closeCode = 0;
 
-  RCTSRLog(@"Received close frame");
+  RCTSRFastLog(@"Received close frame");
 
   if (dataSize == 1) {
     // TODO: handle error
@@ -814,7 +802,7 @@ static inline BOOL closeCodeIsValid(int closeCode)
 - (void)_disconnect;
 {
   [self assertOnWorkQueue];
-  RCTSRLog(@"Trying to disconnect");
+  RCTSRFastLog(@"Trying to disconnect");
   _closeWhenFinishedWriting = YES;
   [self _pumpWriting];
 }
@@ -1260,7 +1248,9 @@ static const char CRLFCRLFBytes[] = {'\r', '\n', '\r', '\n'};
     return;
   }
 
-  while ([self _innerPumpScanner]) {}
+  while ([self _innerPumpScanner]) {
+
+  }
 
   _isPumping = NO;
 }
@@ -1350,6 +1340,7 @@ static const size_t RCTSRFrameHeaderOverhead = 32;
 - (void)stream:(NSStream *)aStream handleEvent:(NSStreamEvent)eventCode;
 {
   if (_secure && !_pinnedCertFound && (eventCode == NSStreamEventHasBytesAvailable || eventCode == NSStreamEventHasSpaceAvailable)) {
+
     NSArray *sslCerts = _urlRequest.RCTSR_SSLPinnedCertificates;
     if (sslCerts) {
       SecTrustRef secTrust = (__bridge SecTrustRef)[aStream propertyForKey:(__bridge id)kCFStreamPropertySSLPeerTrust];
@@ -1380,11 +1371,10 @@ static const size_t RCTSRFrameHeaderOverhead = 32;
     }
   }
 
-  assert(_workQueue != NULL);
   dispatch_async(_workQueue, ^{
     switch (eventCode) {
       case NSStreamEventOpenCompleted: {
-        RCTSRLog(@"NSStreamEventOpenCompleted %@", aStream);
+        RCTSRFastLog(@"NSStreamEventOpenCompleted %@", aStream);
         if (self.readyState >= RCTSR_CLOSING) {
           return;
         }
@@ -1399,7 +1389,7 @@ static const size_t RCTSRFrameHeaderOverhead = 32;
       }
 
       case NSStreamEventErrorOccurred: {
-        RCTSRLog(@"NSStreamEventErrorOccurred %@ %@", aStream, [aStream.streamError copy]);
+        RCTSRFastLog(@"NSStreamEventErrorOccurred %@ %@", aStream, [aStream.streamError copy]);
         // TODO: specify error better!
         [self _failWithError:aStream.streamError];
         _readBufferOffset = 0;
@@ -1410,7 +1400,7 @@ static const size_t RCTSRFrameHeaderOverhead = 32;
 
       case NSStreamEventEndEncountered: {
         [self _pumpScanner];
-        RCTSRLog(@"NSStreamEventEndEncountered %@", aStream);
+        RCTSRFastLog(@"NSStreamEventEndEncountered %@", aStream);
         if (aStream.streamError) {
           [self _failWithError:aStream.streamError];
         } else {
@@ -1436,7 +1426,7 @@ static const size_t RCTSRFrameHeaderOverhead = 32;
       }
 
       case NSStreamEventHasBytesAvailable: {
-        RCTSRLog(@"NSStreamEventHasBytesAvailable %@", aStream);
+        RCTSRFastLog(@"NSStreamEventHasBytesAvailable %@", aStream);
         const int bufferSize = 2048;
         uint8_t buffer[bufferSize];
 
@@ -1458,13 +1448,13 @@ static const size_t RCTSRFrameHeaderOverhead = 32;
       }
 
       case NSStreamEventHasSpaceAvailable: {
-        RCTSRLog(@"NSStreamEventHasSpaceAvailable %@", aStream);
+        RCTSRFastLog(@"NSStreamEventHasSpaceAvailable %@", aStream);
         [self _pumpWriting];
         break;
       }
 
       default:
-        RCTSRLog(@"(default)  %@", aStream);
+        RCTSRFastLog(@"(default)  %@", aStream);
         break;
     }
   });
@@ -1573,6 +1563,37 @@ static const size_t RCTSRFrameHeaderOverhead = 32;
 }
 
 @end
+
+//#define RCTSR_ENABLE_LOG
+
+static inline void RCTSRFastLog(NSString *format, ...)
+{
+#ifdef RCTSR_ENABLE_LOG
+  __block va_list arg_list;
+  va_start (arg_list, format);
+
+  NSString *formattedString = [[NSString alloc] initWithFormat:format arguments:arg_list];
+
+  va_end(arg_list);
+
+  RCTLogInfo(@"[RCTSR] %@", formattedString);
+#endif
+}
+
+// This is a hack, and probably not optimal
+static inline int32_t validate_dispatch_data_partial_string(NSData *data)
+{
+  static const int maxCodepointSize = 3;
+
+  for (int i = 0; i < maxCodepointSize; i++) {
+    NSString *str = [[NSString alloc] initWithBytesNoCopy:(char *)data.bytes length:data.length - i encoding:NSUTF8StringEncoding freeWhenDone:NO];
+    if (str) {
+      return (int32_t)data.length - i;
+    }
+  }
+
+  return -1;
+}
 
 static _RCTSRRunLoopThread *networkThread = nil;
 static NSRunLoop *networkRunLoop = nil;

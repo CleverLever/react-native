@@ -39,7 +39,6 @@
   BOOL _dispatchedInitialTouches;
   BOOL _recordingInteractionTiming;
   CFTimeInterval _mostRecentEnqueueJS;
-  uint16_t _coalescingKey;
 }
 
 - (instancetype)initWithBridge:(RCTBridge *)bridge
@@ -200,8 +199,7 @@ typedef NS_ENUM(NSInteger, RCTTouchEventType) {
 
   RCTTouchEvent *event = [[RCTTouchEvent alloc] initWithEventName:eventName
                                                      reactTouches:reactTouches
-                                                   changedIndexes:changedIndexes
-                                                    coalescingKey:_coalescingKey];
+                                                   changedIndexes:changedIndexes];
   [_eventDispatcher sendEvent:event];
 }
 
@@ -234,7 +232,6 @@ static BOOL RCTAnyTouchesChanged(NSSet<UITouch *> *touches)
 {
   // If gesture just recognized, send all touches to JS as if they just began.
   if (self.state == UIGestureRecognizerStateBegan) {
-    _coalescingKey++;
     [self _updateAndDispatchTouches:_nativeTouches.set eventName:@"topTouchStart" originatingTime:0];
 
     // We store this flag separately from `state` because after a gesture is

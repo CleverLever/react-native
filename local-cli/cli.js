@@ -71,7 +71,7 @@ function run() {
     printUsage();
   }
 
-  var setupEnvScript = /^win/.test(process.platform)
+  const setupEnvScript = /^win/.test(process.platform)
     ? 'setup_env.bat'
     : 'setup_env.sh';
   childProcess.execFileSync(path.join(__dirname, setupEnvScript));

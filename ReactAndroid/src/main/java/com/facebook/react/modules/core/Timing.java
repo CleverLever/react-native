@@ -12,8 +12,6 @@ package com.facebook.react.modules.core;
 import javax.annotation.Nullable;
 
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -22,9 +20,7 @@ import android.view.Choreographer;
 
 import com.facebook.infer.annotation.Assertions;
 import com.facebook.react.bridge.Arguments;
-import com.facebook.react.bridge.ExecutorToken;
 import com.facebook.react.bridge.LifecycleEventListener;
-import com.facebook.react.bridge.OnExecutorUnregisteredListener;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
@@ -35,24 +31,16 @@ import com.facebook.react.uimanager.ReactChoreographer;
 /**
  * Native module for JS timer execution. Timers fire on frame boundaries.
  */
-public final class Timing extends ReactContextBaseJavaModule implements LifecycleEventListener,
-  OnExecutorUnregisteredListener {
+public final class Timing extends ReactContextBaseJavaModule implements LifecycleEventListener {
 
   private static class Timer {
 
-    private final ExecutorToken mExecutorToken;
     private final int mCallbackID;
     private final boolean mRepeat;
     private final int mInterval;
     private long mTargetTime;
 
-    private Timer(
-        ExecutorToken executorToken,
-        int callbackID,
-        long initialTargetTime,
-        int duration,
-        boolean repeat) {
-      mExecutorToken = executorToken;
+    private Timer(int callbackID, long initialTargetTime, int duration, boolean repeat) {
       mCallbackID = callbackID;
       mTargetTime = initialTargetTime;
       mInterval = duration;
@@ -61,9 +49,6 @@ public final class Timing extends ReactContextBaseJavaModule implements Lifecycl
   }
 
   private class FrameCallback implements Choreographer.FrameCallback {
-
-    // Temporary map for constructing the individual arrays of timers per ExecutorToken
-    private final HashMap<ExecutorToken, WritableArray> mTimersToCall = new HashMap<>();
 
     /**
      * Calls all timers that have expired since the last time this frame callback was called.
@@ -75,15 +60,14 @@ public final class Timing extends ReactContextBaseJavaModule implements Lifecycl
       }
 
       long frameTimeMillis = frameTimeNanos / 1000000;
+      WritableArray timersToCall = null;
       synchronized (mTimerGuard) {
         while (!mTimers.isEmpty() && mTimers.peek().mTargetTime < frameTimeMillis) {
           Timer timer = mTimers.poll();
-          WritableArray timersForContext = mTimersToCall.get(timer.mExecutorToken);
-          if (timersForContext == null) {
-            timersForContext = Arguments.createArray();
-            mTimersToCall.put(timer.mExecutorToken, timersForContext);
+          if (timersToCall == null) {
+            timersToCall = Arguments.createArray();
           }
-          timersForContext.pushInt(timer.mCallbackID);
+          timersToCall.pushInt(timer.mCallbackID);
           if (timer.mRepeat) {
             timer.mTargetTime = frameTimeMillis + timer.mInterval;
             mTimers.add(timer);
@@ -93,11 +77,9 @@ public final class Timing extends ReactContextBaseJavaModule implements Lifecycl
         }
       }
 
-      for (Map.Entry<ExecutorToken, WritableArray> entry : mTimersToCall.entrySet()) {
-        getReactApplicationContext().getJSModule(entry.getKey(), JSTimersExecution.class)
-            .callTimers(entry.getValue());
+      if (timersToCall != null) {
+        Assertions.assertNotNull(mJSTimersModule).callTimers(timersToCall);
       }
-      mTimersToCall.clear();
 
       Assertions.assertNotNull(mReactChoreographer)
           .postFrameCallback(ReactChoreographer.CallbackType.TIMERS_EVENTS, this);
@@ -106,10 +88,11 @@ public final class Timing extends ReactContextBaseJavaModule implements Lifecycl
 
   private final Object mTimerGuard = new Object();
   private final PriorityQueue<Timer> mTimers;
-  private final HashMap<ExecutorToken, SparseArray<Timer>> mTimerIdsToTimers;
+  private final SparseArray<Timer> mTimerIdsToTimers;
   private final AtomicBoolean isPaused = new AtomicBoolean(true);
   private final FrameCallback mFrameCallback = new FrameCallback();
   private @Nullable ReactChoreographer mReactChoreographer;
+  private @Nullable JSTimersExecution mJSTimersModule;
   private boolean mFrameCallbackPosted = false;
 
   public Timing(ReactApplicationContext reactContext) {
@@ -130,13 +113,15 @@ public final class Timing extends ReactContextBaseJavaModule implements Lifecycl
             }
           }
         });
-    mTimerIdsToTimers = new HashMap<>();
+    mTimerIdsToTimers = new SparseArray<Timer>();
   }
 
   @Override
   public void initialize() {
     // Safe to acquire choreographer here, as initialize() is invoked from UI thread.
     mReactChoreographer = ReactChoreographer.getInstance();
+    mJSTimersModule = getReactApplicationContext().getCatalystInstance()
+        .getJSModule(JSTimersExecution.class);
     getReactApplicationContext().addLifecycleEventListener(this);
   }
 
@@ -187,28 +172,8 @@ public final class Timing extends ReactContextBaseJavaModule implements Lifecycl
     return "RKTiming";
   }
 
-  @Override
-  public boolean supportsWebWorkers() {
-    return true;
-  }
-
-  @Override
-  public void onExecutorDestroyed(ExecutorToken executorToken) {
-    synchronized (mTimerGuard) {
-      SparseArray<Timer> timersForContext = mTimerIdsToTimers.remove(executorToken);
-      if (timersForContext == null) {
-        return;
-      }
-      for (int i = 0; i < timersForContext.size(); i++) {
-        Timer timer = timersForContext.get(timersForContext.keyAt(i));
-        mTimers.remove(timer);
-      }
-    }
-  }
-
   @ReactMethod
   public void createTimer(
-      ExecutorToken executorToken,
       final int callbackID,
       final int duration,
       final double jsSchedulingTime,
@@ -217,41 +182,23 @@ public final class Timing extends ReactContextBaseJavaModule implements Lifecycl
     long adjustedDuration = (long) Math.max(
         0,
         jsSchedulingTime - SystemClock.currentTimeMillis() + duration);
-    if (duration == 0 && !repeat) {
-      WritableArray timerToCall = Arguments.createArray();
-      timerToCall.pushInt(callbackID);
-      getReactApplicationContext().getJSModule(executorToken, JSTimersExecution.class)
-        .callTimers(timerToCall);
-      return;
-    }
-
     long initialTargetTime = SystemClock.nanoTime() / 1000000 + adjustedDuration;
-    Timer timer = new Timer(executorToken, callbackID, initialTargetTime, duration, repeat);
+    Timer timer = new Timer(callbackID, initialTargetTime, duration, repeat);
     synchronized (mTimerGuard) {
       mTimers.add(timer);
-      SparseArray<Timer> timersForContext = mTimerIdsToTimers.get(executorToken);
-      if (timersForContext == null) {
-        timersForContext = new SparseArray<>();
-        mTimerIdsToTimers.put(executorToken, timersForContext);
-      }
-      timersForContext.put(callbackID, timer);
+      mTimerIdsToTimers.put(callbackID, timer);
     }
   }
 
   @ReactMethod
-  public void deleteTimer(ExecutorToken executorToken, int timerId) {
+  public void deleteTimer(int timerId) {
     synchronized (mTimerGuard) {
-      SparseArray<Timer> timersForContext = mTimerIdsToTimers.get(executorToken);
-      if (timersForContext == null) {
-        return;
+      Timer timer = mTimerIdsToTimers.get(timerId);
+      if (timer != null) {
+        // We may have already called/removed it
+        mTimerIdsToTimers.remove(timerId);
+        mTimers.remove(timer);
       }
-      Timer timer = timersForContext.get(timerId);
-      if (timer == null) {
-        return;
-      }
-      // We may have already called/removed it
-      mTimerIdsToTimers.remove(timerId);
-      mTimers.remove(timer);
     }
   }
 }

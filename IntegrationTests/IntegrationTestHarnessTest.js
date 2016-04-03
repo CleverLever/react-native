@@ -10,7 +10,7 @@
  */
 'use strict';
 
-var requestAnimationFrame = require('fbjs/lib/requestAnimationFrame');
+var requestAnimationFrame = require('requestAnimationFrame');
 var React = require('react-native');
 var {
   Text,

@@ -16,7 +16,6 @@
 #import "RCTBridge+Private.h"
 #import "RCTDefines.h"
 #import "RCTRedBox.h"
-#import "RCTUtils.h"
 
 static NSString *const RCTLogFunctionStack = @"RCTLogFunctionStack";
 
@@ -227,10 +226,8 @@ void _RCTLogNativeInternal(RCTLogLevel level, const char *fileName, int lineNumb
       });
     }
 
-    if (!RCTRunningInTestEnvironment()) {
-      // Log to JS executor
-      [[RCTBridge currentBridge] logMessage:message level:level ? @(RCTLogLevels[level]) : @"info"];
-    }
+    // Log to JS executor
+    [[RCTBridge currentBridge] logMessage:message level:level ? @(RCTLogLevels[level]) : @"info"];
 
 #endif
 

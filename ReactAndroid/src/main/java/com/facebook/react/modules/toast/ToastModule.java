@@ -17,7 +17,6 @@ import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.common.MapBuilder;
-import com.facebook.react.bridge.UiThreadUtil;
 
 import java.util.Map;
 
@@ -47,12 +46,7 @@ public class ToastModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void show(final String message, final int duration) {
-    UiThreadUtil.runOnUiThread(new Runnable() {
-      @Override
-      public void run(){
-        Toast.makeText(getReactApplicationContext(), message, duration).show();        
-      }
-    });
+  public void show(String message, int duration) {
+    Toast.makeText(getReactApplicationContext(), message, duration).show();
   }
 }

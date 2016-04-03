@@ -27,7 +27,6 @@
 #import "RCTModuleMethod.h"
 #import "RCTProfile.h"
 #import "RCTRootView.h"
-#import "RCTRootShadowView.h"
 #import "RCTRootViewInternal.h"
 #import "RCTScrollableProtocol.h"
 #import "RCTShadowView.h"
@@ -202,13 +201,16 @@ static UIViewAnimationOptions UIViewAnimationOptionsFromRCTAnimationType(RCTAnim
   NSDictionary *_componentDataByName;
 
   NSMutableSet<id<RCTComponent>> *_bridgeTransactionListeners;
-
-  UIInterfaceOrientation _currentInterfaceOrientation;
 }
 
 @synthesize bridge = _bridge;
 
 RCT_EXPORT_MODULE()
+
+/**
+ * Declared in RCTBridge.
+ */
+extern NSString *RCTBridgeModuleNameForClass(Class cls);
 
 - (void)didReceiveNewContentSizeMultiplier
 {
@@ -221,23 +223,6 @@ RCT_EXPORT_MODULE()
       [strongSelf batchDidComplete];
     }
   });
-}
-
-- (void)interfaceOrientationWillChange:(NSNotification *)notification
-{
-  UIInterfaceOrientation nextOrientation =
-    [notification.userInfo[UIApplicationStatusBarOrientationUserInfoKey] integerValue];
-
-  // Update when we go from portrait to landscape, or landscape to portrait
-  if ((UIInterfaceOrientationIsPortrait(_currentInterfaceOrientation) &&
-      !UIInterfaceOrientationIsPortrait(nextOrientation)) ||
-      (UIInterfaceOrientationIsLandscape(_currentInterfaceOrientation) &&
-      !UIInterfaceOrientationIsLandscape(nextOrientation))) {
-    [_bridge.eventDispatcher sendDeviceEventWithName:@"didUpdateDimensions"
-                                                body:RCTExportedDimensions(YES)];
-  }
-
-  _currentInterfaceOrientation = nextOrientation;
 }
 
 - (void)invalidate
@@ -313,17 +298,12 @@ RCT_EXPORT_MODULE()
                                            selector:@selector(didReceiveNewContentSizeMultiplier)
                                                name:RCTAccessibilityManagerDidUpdateMultiplierNotification
                                              object:_bridge.accessibilityManager];
-
-  [[NSNotificationCenter defaultCenter] addObserver:self
-                                           selector:@selector(interfaceOrientationWillChange:)
-                                               name:UIApplicationWillChangeStatusBarOrientationNotification
-                                             object:nil];
 }
 
 - (dispatch_queue_t)methodQueue
 {
   if (!_shadowQueue) {
-    const char *queueName = "com.facebook.react.ShadowQueue";
+    const char *queueName = "com.facebook.React.ShadowQueue";
 
     if ([NSOperation instancesRespondToSelector:@selector(qualityOfService)]) {
       dispatch_queue_attr_t attr = dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_USER_INTERACTIVE, 0);
@@ -359,7 +339,7 @@ RCT_EXPORT_MODULE()
     if (!_viewRegistry) {
       return;
     }
-    RCTRootShadowView *shadowView = [RCTRootShadowView new];
+    RCTShadowView *shadowView = [RCTShadowView new];
     shadowView.reactTag = reactTag;
     shadowView.frame = frame;
     shadowView.backgroundColor = rootView.backgroundColor;
@@ -395,53 +375,28 @@ RCT_EXPORT_MODULE()
 
   NSNumber *reactTag = view.reactTag;
   dispatch_async(_shadowQueue, ^{
-    RCTShadowView *shadowView = _shadowViewRegistry[reactTag];
-    RCTAssert(shadowView != nil, @"Could not locate shadow view with tag #%@", reactTag);
+    RCTShadowView *rootShadowView = _shadowViewRegistry[reactTag];
+    RCTAssert(rootShadowView != nil, @"Could not locate root view with tag #%@", reactTag);
 
-    BOOL dirtyLayout = NO;
-
-    if (!CGRectEqualToRect(frame, shadowView.frame)) {
-      shadowView.frame = frame;
-      dirtyLayout = YES;
-    }
-
-    // Trigger re-layout when size flexibility changes, as the root view might grow or
-    // shrink in the flexible dimensions.
     if (RCTIsReactRootView(reactTag)) {
-      RCTRootShadowView *rootShadowView = (RCTRootShadowView *)shadowView;
-      if (rootShadowView.sizeFlexibility != sizeFlexibility) {
-        rootShadowView.sizeFlexibility = sizeFlexibility;
-        dirtyLayout = YES;
-      }
+      rootShadowView.frame = frame;
+      rootShadowView.sizeFlexibility = sizeFlexibility;
+    } else {
+      rootShadowView.frame = frame;
     }
 
-    if (dirtyLayout) {
-      [shadowView dirtyLayout];
-      [self batchDidComplete];
-    }
-  });
-}
-
-- (void)setIntrinsicContentSize:(CGSize)size forView:(UIView *)view
-{
-  RCTAssertMainThread();
-
-  NSNumber *reactTag = view.reactTag;
-  dispatch_async(_shadowQueue, ^{
-    RCTShadowView *shadowView = _shadowViewRegistry[reactTag];
-    RCTAssert(shadowView != nil, @"Could not locate root view with tag #%@", reactTag);
-
-    shadowView.intrinsicContentSize = size;
+    [rootShadowView dirtyLayout];
 
     [self batchDidComplete];
   });
 }
 
-- (void)setBackgroundColor:(UIColor *)color forView:(UIView *)view
+- (void)setBackgroundColor:(UIColor *)color forRootView:(UIView *)rootView
 {
   RCTAssertMainThread();
 
-  NSNumber *reactTag = view.reactTag;
+  NSNumber *reactTag = rootView.reactTag;
+  RCTAssert(RCTIsReactRootView(reactTag), @"Specified view %@ is not a root view", reactTag);
 
   __weak RCTUIManager *weakSelf = self;
   dispatch_async(_shadowQueue, ^{
@@ -449,10 +404,10 @@ RCT_EXPORT_MODULE()
     if (!_viewRegistry) {
       return;
     }
-    RCTShadowView *shadowView = strongSelf->_shadowViewRegistry[reactTag];
-    RCTAssert(shadowView != nil, @"Could not locate root view with tag #%@", reactTag);
-    shadowView.backgroundColor = color;
-    [self _amendPendingUIBlocksWithStylePropagationUpdateForShadowView:shadowView];
+    RCTShadowView *rootShadowView = strongSelf->_shadowViewRegistry[reactTag];
+    RCTAssert(rootShadowView != nil, @"Could not locate root view with tag #%@", reactTag);
+    rootShadowView.backgroundColor = color;
+    [self _amendPendingUIBlocksWithStylePropagationUpdateForRootView:rootShadowView];
     [self flushUIBlocks];
   });
 }
@@ -503,7 +458,7 @@ RCT_EXPORT_MODULE()
   [_pendingUIBlocks addObject:outerBlock];
 }
 
-- (RCTViewManagerUIBlock)uiBlockWithLayoutUpdateForRootView:(RCTRootShadowView *)rootShadowView
+- (RCTViewManagerUIBlock)uiBlockWithLayoutUpdateForRootView:(RCTShadowView *)rootShadowView
 {
   RCTAssert(![NSThread isMainThread], @"Should be called on shadow thread");
 
@@ -512,7 +467,7 @@ RCT_EXPORT_MODULE()
   // these structures in the UI-thread block. `NSMutableArray` is not thread
   // safe so we rely on the fact that we never mutate it after it's passed to
   // the main thread.
-  NSSet<RCTShadowView *> *viewsWithNewFrames = [rootShadowView collectViewsWithUpdatedFrames];
+  NSSet<RCTShadowView *> *viewsWithNewFrames = [rootShadowView collectRootUpdatedFrames];
 
   if (!viewsWithNewFrames.count) {
     // no frame change results in no UI update block
@@ -659,7 +614,7 @@ RCT_EXPORT_MODULE()
   };
 }
 
-- (void)_amendPendingUIBlocksWithStylePropagationUpdateForShadowView:(RCTShadowView *)topView
+- (void)_amendPendingUIBlocksWithStylePropagationUpdateForRootView:(RCTShadowView *)topView
 {
   NSMutableSet<RCTApplierBlock> *applierBlocks = [NSMutableSet setWithCapacity:1];
   [topView collectUpdatedProperties:applierBlocks parentProperties:@{}];
@@ -900,18 +855,14 @@ RCT_EXPORT_METHOD(createView:(nonnull NSNumber *)reactTag
   [self addUIBlock:^(RCTUIManager *uiManager, NSDictionary<NSNumber *, UIView *> *viewRegistry){
     UIView *view = [componentData createViewWithTag:reactTag];
     if (view) {
-      [componentData setProps:props forView:view]; // Must be done before bgColor to prevent wrong default
       if ([view respondsToSelector:@selector(setBackgroundColor:)]) {
         ((UIView *)view).backgroundColor = backgroundColor;
       }
+      [componentData setProps:props forView:view];
       if ([view respondsToSelector:@selector(reactBridgeDidFinishTransaction)]) {
         [uiManager->_bridgeTransactionListeners addObject:view];
       }
       ((NSMutableDictionary<NSNumber *, UIView *> *)viewRegistry)[reactTag] = view;
-
-#if RCT_DEV
-      [view _DEBUG_setReactShadowView:shadowView];
-#endif
     }
   }];
 }
@@ -1004,7 +955,7 @@ RCT_EXPORT_METHOD(dispatchViewManagerCommand:(nonnull NSNumber *)reactTag
   // Gather blocks to be executed now that all view hierarchy manipulations have
   // been completed (note that these may still take place before layout has finished)
   for (RCTComponentData *componentData in _componentDataByName.allValues) {
-    RCTViewManagerUIBlock uiBlock = [componentData uiBlockToAmendWithShadowViewRegistry:_shadowViewRegistry];
+    RCTViewManagerUIBlock uiBlock = [componentData.manager uiBlockToAmendWithShadowViewRegistry:_shadowViewRegistry];
     [self addUIBlock:uiBlock];
   }
 
@@ -1018,9 +969,9 @@ RCT_EXPORT_METHOD(dispatchViewManagerCommand:(nonnull NSNumber *)reactTag
 
   // Perform layout
   for (NSNumber *reactTag in _rootViewTags) {
-    RCTRootShadowView *rootView = (RCTRootShadowView *)_shadowViewRegistry[reactTag];
+    RCTShadowView *rootView = _shadowViewRegistry[reactTag];
     [self addUIBlock:[self uiBlockWithLayoutUpdateForRootView:rootView]];
-    [self _amendPendingUIBlocksWithStylePropagationUpdateForShadowView:rootView];
+    [self _amendPendingUIBlocksWithStylePropagationUpdateForRootView:rootView];
   }
 
   // Clear layout animations
@@ -1094,16 +1045,18 @@ RCT_EXPORT_METHOD(measure:(nonnull NSNumber *)reactTag
       callback(@[]);
       return;
     }
+    CGRect frame = view.frame;
 
-    // If in a <Modal>, rootView will be the root of the modal container.
     UIView *rootView = view;
-    while (rootView.superview && ![rootView isReactRootView]) {
+    while (rootView && ![rootView isReactRootView]) {
       rootView = rootView.superview;
     }
 
+    // TODO: this doesn't work because sometimes view is inside a modal window
+    // RCTAssert([rootView isReactRootView], @"React view is not inside a React root view");
+
     // By convention, all coordinates, whether they be touch coordinates, or
     // measurement coordinates are with respect to the root view.
-    CGRect frame = view.frame;
     CGPoint pagePoint = [view.superview convertPoint:frame.origin toView:rootView];
 
     callback(@[
@@ -1113,29 +1066,6 @@ RCT_EXPORT_METHOD(measure:(nonnull NSNumber *)reactTag
       @(frame.size.height),
       @(pagePoint.x),
       @(pagePoint.y)
-    ]);
-  }];
-}
-
-RCT_EXPORT_METHOD(measureInWindow:(nonnull NSNumber *)reactTag
-                  callback:(RCTResponseSenderBlock)callback)
-{
-  [self addUIBlock:^(__unused RCTUIManager *uiManager, NSDictionary<NSNumber *, UIView *> *viewRegistry) {
-    UIView *view = viewRegistry[reactTag];
-    if (!view) {
-      // this view was probably collapsed out
-      RCTLogWarn(@"measure cannot find view with tag #%@", reactTag);
-      callback(@[]);
-      return;
-    }
-
-    // Return frame coordinates in window
-    CGRect windowFrame = [view.window convertRect:view.frame fromView:view.superview];
-    callback(@[
-      @(windowFrame.origin.x),
-      @(windowFrame.origin.y),
-      @(windowFrame.size.width),
-      @(windowFrame.size.height),
     ]);
   }];
 }
@@ -1252,73 +1182,6 @@ RCT_EXPORT_METHOD(measureViewsInRect:(CGRect)rect
   callback(@[results]);
 }
 
-RCT_EXPORT_METHOD(takeSnapshot:(id /* NSString or NSNumber */)target
-                  withOptions:(NSDictionary *)options
-                  resolve:(RCTPromiseResolveBlock)resolve
-                  reject:(RCTPromiseRejectBlock)reject)
-{
-  [self addUIBlock:^(__unused RCTUIManager *uiManager, NSDictionary<NSNumber *, UIView *> *viewRegistry) {
-
-    // Get view
-    UIView *view;
-    if (target == nil || [target isEqual:@"window"]) {
-      view = RCTKeyWindow();
-    } else if ([target isKindOfClass:[NSNumber class]]) {
-      view = viewRegistry[target];
-      if (!view) {
-        RCTLogError(@"No view found with reactTag: %@", target);
-        return;
-      }
-    }
-
-    // Get options
-    CGSize size = [RCTConvert CGSize:options];
-    NSString *format = [RCTConvert NSString:options[@"format"] ?: @"png"];
-
-    // Capture image
-    if (size.width < 0.1 || size.height < 0.1) {
-      size = view.bounds.size;
-    }
-    UIGraphicsBeginImageContextWithOptions(size, NO, 0);
-    BOOL success = [view drawViewHierarchyInRect:(CGRect){CGPointZero, size} afterScreenUpdates:YES];
-    UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
-
-    if (!success || !image) {
-      reject(RCTErrorUnspecified, @"Failed to capture view snapshot.", nil);
-      return;
-    }
-
-    // Convert image to data (on a background thread)
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-
-      NSData *data;
-      if ([format isEqualToString:@"png"]) {
-        data = UIImagePNGRepresentation(image);
-      } else if ([format isEqualToString:@"jpeg"]) {
-        CGFloat quality = [RCTConvert CGFloat:options[@"quality"] ?: @1];
-        data = UIImageJPEGRepresentation(image, quality);
-      } else {
-        RCTLogError(@"Unsupported image format: %@", format);
-        return;
-      }
-
-      // Save to a temp file
-      NSError *error = nil;
-      NSString *tempFilePath = RCTTempFilePath(format, &error);
-      if (tempFilePath) {
-        if ([data writeToFile:tempFilePath options:(NSDataWritingOptions)0 error:&error]) {
-          resolve(tempFilePath);
-          return;
-        }
-      }
-
-      // If we reached here, something went wrong
-      reject(RCTErrorUnspecified, error.localizedDescription, error);
-    });
-  }];
-}
-
 /**
  * JS sets what *it* considers to be the responder. Later, scroll views can use
  * this in order to determine if scrolling is appropriate.
@@ -1393,29 +1256,23 @@ RCT_EXPORT_METHOD(clearJSResponder)
      allJSConstants[name] = constantsNamespace;
   }];
 
-  _currentInterfaceOrientation = [RCTSharedApplication() statusBarOrientation];
   [allJSConstants addEntriesFromDictionary:@{
     @"customBubblingEventTypes": bubblingEvents,
     @"customDirectEventTypes": directEvents,
-    @"Dimensions": RCTExportedDimensions(NO)
+    @"Dimensions": @{
+      @"window": @{
+        @"width": @(RCTScreenSize().width),
+        @"height": @(RCTScreenSize().height),
+        @"scale": @(RCTScreenScale()),
+      },
+      @"modalFullscreenView": @{
+        @"width": @(RCTScreenSize().width),
+        @"height": @(RCTScreenSize().height),
+      },
+    },
   }];
 
   return allJSConstants;
-}
-
-static NSDictionary *RCTExportedDimensions(BOOL rotateBounds)
-{
-  RCTAssertMainThread();
-
-  // Don't use RCTScreenSize since it the interface orientation doesn't apply to it
-  CGRect screenSize = [[UIScreen mainScreen] bounds];
-  return @{
-    @"window": @{
-        @"width": @(rotateBounds ? screenSize.size.height : screenSize.size.width),
-        @"height": @(rotateBounds ? screenSize.size.width : screenSize.size.height),
-        @"scale": @(RCTScreenScale()),
-    },
-  };
 }
 
 RCT_EXPORT_METHOD(configureNextLayoutAnimation:(NSDictionary *)config

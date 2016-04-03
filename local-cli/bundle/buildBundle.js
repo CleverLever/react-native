@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  */
+'use strict';
 
 const log = require('../util/log').out('bundle');
 const outputBundle = require('./output/bundle');
@@ -13,7 +14,7 @@ const Promise = require('promise');
 const ReactPackager = require('../../packager/react-packager');
 const saveAssets = require('./saveAssets');
 
-function buildBundle(args, config, output = outputBundle, packagerInstance) {
+function buildBundle(args, config, output = outputBundle) {
   return new Promise((resolve, reject) => {
 
     // This is used by a bazillion of npm modules we don't control so we don't
@@ -23,10 +24,11 @@ function buildBundle(args, config, output = outputBundle, packagerInstance) {
     const options = {
       projectRoots: config.getProjectRoots(),
       assetRoots: config.getAssetRoots(),
-      blacklistRE: config.getBlacklistRE(args.platform),
+      blacklistRE: config.getBlacklistRE(),
       getTransformOptionsModulePath: config.getTransformOptionsModulePath,
       transformModulePath: args.transformer,
       verbose: args.verbose,
+      disableInternalTransforms: true,
     };
 
     const requestOpts = {
@@ -37,34 +39,25 @@ function buildBundle(args, config, output = outputBundle, packagerInstance) {
       platform: args.platform,
     };
 
-    var bundlePromise;
-    if (packagerInstance) {
-      bundlePromise = output.build(packagerInstance, requestOpts)
-        .then(bundle => {
-          output.save(bundle, args, log);
-          return bundle;
-        });
-    } else {
-      const clientPromise = ReactPackager.createClientFor(options);
+    const clientPromise = ReactPackager.createClientFor(options);
 
-      // Build and save the bundle
-      bundlePromise = clientPromise
-        .then(client => {
-          log('Created ReactPackager');
-          return output.build(client, requestOpts);
-        })
-        .then(bundle => {
-          output.save(bundle, args, log);
-          return bundle;
-        });
+    // Build and save the bundle
+    const bundlePromise = clientPromise
+      .then(client => {
+        log('Created ReactPackager');
+        return output.build(client, requestOpts);
+      })
+      .then(bundle => {
+        output.save(bundle, args, log);
+        return bundle;
+      });
 
-      // When we're done bundling, close the client
-      Promise.all([clientPromise, bundlePromise])
-        .then(([client]) => {
-          log('Closing client');
-          client.close();
-        });
-    }
+    // When we're done bundling, close the client
+    Promise.all([clientPromise, bundlePromise])
+      .then(([client]) => {
+        log('Closing client');
+        client.close();
+      });
 
     // Save the assets of the bundle
     const assets = bundlePromise

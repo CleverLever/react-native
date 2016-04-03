@@ -11,7 +11,6 @@
  */
 'use strict';
 
-var Platform = require('Platform');
 var PropTypes = require('ReactPropTypes');
 var React = require('React');
 var StyleSheet = require('StyleSheet');
@@ -32,6 +31,8 @@ var RCTModalHostView = requireNativeComponent('RCTModalHostView', null);
  * Navigator instead of Modal. With a top-level Navigator, you have more control
  * over how to present the modal scene over the rest of your app by using the
  * configureScene property.
+ *
+ * This component is only available in iOS at this time.
  */
 class Modal extends React.Component {
   render(): ?ReactElement {
@@ -47,8 +48,7 @@ class Modal extends React.Component {
       <RCTModalHostView
         animated={this.props.animated}
         transparent={this.props.transparent}
-        onRequestClose={this.props.onRequestClose}
-        onShow={this.props.onShow}
+        onDismiss={this.props.onDismiss}
         style={styles.modal}>
         <View style={[styles.container, containerBackgroundColor]}>
           {this.props.children}
@@ -62,8 +62,7 @@ Modal.propTypes = {
   animated: PropTypes.bool,
   transparent: PropTypes.bool,
   visible: PropTypes.bool,
-  onRequestClose: Platform.OS === 'android' ? PropTypes.func.isRequired : PropTypes.func,
-  onShow: PropTypes.func,
+  onDismiss: PropTypes.func,
 };
 
 Modal.defaultProps = {
@@ -75,8 +74,8 @@ var styles = StyleSheet.create({
     position: 'absolute',
   },
   container: {
-    position: 'absolute',
     left: 0,
+    position: 'absolute',
     top: 0,
   }
 });

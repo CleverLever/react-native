@@ -41,12 +41,12 @@ function renderType(type) {
     return '{' + Object.keys(type.value).map((key => key + ': ' + renderType(type.value[key]))).join(', ') + '}';
   }
 
-  if (type.name === 'union') {
+  if (type.name == 'union') {
     return type.value.map(renderType).join(', ');
   }
 
   if (type.name === 'arrayOf') {
-    return <span>[{renderType(type.value)}]</span>;
+    return '[' + renderType(type.value) + ']';
   }
 
   if (type.name === 'instanceOf') {
@@ -56,10 +56,10 @@ function renderType(type) {
   if (type.name === 'custom') {
     if (styleReferencePattern.test(type.raw)) {
       var name = type.raw.substring(0, type.raw.indexOf('.'));
-      return <a href={'docs/' + slugify(name) + '.html#style'}>{name}#style</a>;
+      return <a href={slugify(name) + '.html#style'}>{name}#style</a>
     }
     if (type.raw === 'ColorPropType') {
-      return <a href={'docs/colors.html'}>color</a>;
+      return <a href={'colors.html'}>color</a>
     }
     if (type.raw === 'EdgeInsetsPropType') {
       return '{top: number, left: number, bottom: number, right: number}';
@@ -140,7 +140,7 @@ var ComponentDoc = React.createClass({
     return (
       <div className="prop" key={name}>
         <Header level={4} className="propTitle" toSlug={name}>
-          <a href={'docs/' + slugify(name) + '.html#props'}>{name} props...</a>
+          <a href={slugify(name) + '.html#props'}>{name} props...</a>
         </Header>
       </div>
     );
@@ -175,15 +175,15 @@ var ComponentDoc = React.createClass({
           if (name === 'LayoutPropTypes') {
             name = 'Flexbox';
             link =
-              <a href={'docs/' + slugify(name) + '.html#proptypes'}>{name}...</a>;
+              <a href={slugify(name) + '.html#proptypes'}>{name}...</a>;
           } else if (name === 'TransformPropTypes') {
             name = 'Transforms';
             link =
-              <a href={'docs/' + slugify(name) + '.html#proptypes'}>{name}...</a>;
+              <a href={slugify(name) + '.html#proptypes'}>{name}...</a>;
           } else {
             name = name.replace('StylePropTypes', '');
             link =
-              <a href={'docs/' + slugify(name) + '.html#style'}>{name}#style...</a>;
+              <a href={slugify(name) + '.html#style'}>{name}#style...</a>;
           }
           return (
             <div className="prop" key={name}>
@@ -448,14 +448,6 @@ var Modal = React.createClass({
 });
 
 var Autodocs = React.createClass({
-  childContextTypes: {
-    permalink: React.PropTypes.string
-  },
-
-  getChildContext: function() {
-    return {permalink: this.props.metadata.permalink};
-  },
-
   renderFullDescription: function(docs) {
     if (!docs.fullDescription) {
       return;
@@ -514,8 +506,8 @@ var Autodocs = React.createClass({
             {this.renderFullDescription(docs)}
             {this.renderExample(docs, metadata)}
             <div className="docs-prevnext">
-              {metadata.previous && <a className="docs-prev" href={'docs/' + metadata.previous + '.html#content'}>&larr; Prev</a>}
-              {metadata.next && <a className="docs-next" href={'docs/' + metadata.next + '.html#content'}>Next &rarr;</a>}
+              {metadata.previous && <a className="docs-prev" href={metadata.previous + '.html#content'}>&larr; Prev</a>}
+              {metadata.next && <a className="docs-next" href={metadata.next + '.html#content'}>Next &rarr;</a>}
             </div>
           </div>
 

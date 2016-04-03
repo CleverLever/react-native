@@ -30,11 +30,6 @@ public interface DeveloperSettings {
   boolean isJSDevModeEnabled();
 
   /**
-   * @return Whether JS bundle should be minified.
-   */
-  boolean isJSMinifyEnabled();
-
-  /**
    * @return Whether element inspector is enabled.
    */
   boolean isElementInspectorEnabled();

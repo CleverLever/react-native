@@ -16,7 +16,7 @@
 var React = require('react-native');
 var {
   NavigatorIOS,
-  StatusBar,
+  StatusBarIOS,
   StyleSheet,
   Text,
   View
@@ -45,7 +45,7 @@ var NavigatorIOSColors = React.createClass({
 
   render: function() {
     // Set StatusBar with light contents to get better contrast
-    StatusBar.setBarStyle('light-content');
+    StatusBarIOS.setStyle('light-content');
 
     return (
       <NavigatorIOS
@@ -55,7 +55,7 @@ var NavigatorIOSColors = React.createClass({
           title: '<NavigatorIOS>',
           rightButtonTitle: 'Done',
           onRightButtonPress: () => {
-            StatusBar.setBarStyle('default');
+            StatusBarIOS.setStyle('default');
             this.props.onExampleExit();
           },
           passProps: {

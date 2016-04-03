@@ -105,10 +105,6 @@ public class ReactShadowNode extends CSSNode {
     }
   }
 
-  public boolean hasUnseenUpdates() {
-    return mNodeUpdated;
-  }
-
   @Override
   protected void dirty() {
     if (!isVirtual()) {

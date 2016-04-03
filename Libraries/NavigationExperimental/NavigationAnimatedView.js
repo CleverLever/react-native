@@ -11,230 +11,214 @@
  */
 'use strict';
 
-const Animated = require('Animated');
-const NavigationContainer = require('NavigationContainer');
-const NavigationPropTypes = require('NavigationPropTypes');
-const NavigationScenesReducer = require('NavigationScenesReducer');
-const React = require('react-native');
-const StyleSheet = require('StyleSheet');
-const View = require('View');
+var Animated = require('Animated');
+var Map = require('Map');
+var NavigationStateUtils = require('NavigationState');
+var NavigationContainer = require('NavigationContainer');
+var React = require('react-native');
+var View = require('View');
 
 import type {
-  NavigationActionCaller,
-  NavigationAnimatedValue,
-  NavigationAnimationSetter,
-  NavigationLayout,
+  NavigationState,
   NavigationParentState,
-  NavigationScene,
-  NavigationSceneRenderer,
-} from 'NavigationTypeDefinition';
+} from 'NavigationState';
 
-type Props = {
-  applyAnimation: NavigationAnimationSetter,
-  navigationState: NavigationParentState,
-  onNavigate: NavigationActionCaller,
-  renderOverlay: ?NavigationSceneRenderer,
-  renderScene: NavigationSceneRenderer,
-  style: any,
+type NavigationScene = {
+  index: number,
+  state: NavigationState,
+  isStale: boolean,
 };
 
-type State = {
-  position: NavigationAnimatedValue,
-  scenes: Array<NavigationScene>,
-};
-
-const {PropTypes} = React;
-
-function applyDefaultAnimation(
-  position: NavigationAnimatedValue,
-  navigationState: NavigationParentState,
-): void {
-  Animated.spring(
-    position,
-    {
-      bounciness: 0,
-      toValue: navigationState.index,
-    }
-  ).start();
+/**
+ * Helper function to compare route keys (e.g. "9", "11").
+ */
+function compareKey(one: string, two: string): number {
+  var delta = one.length - two.length;
+  if (delta > 0) {
+    return 1;
+  }
+  if (delta < 0) {
+    return -1;
+  }
+  return one > two ? 1 : -1;
 }
 
-class NavigationAnimatedView
-  extends React.Component<any, Props, State> {
+/**
+ * Helper function to sort scenes based on their index and view key.
+ */
+function compareScenes(
+  one: NavigationScene,
+  two: NavigationScene
+): number {
+  if (one.index > two.index) {
+    return 1;
+  }
+  if (one.index < two.index) {
+    return -1;
+  }
 
-  _layout: NavigationLayout;
-  _onLayout: (event: any) => void;
-  _onProgressChange: (data: {value: number}) => void;
-  _positionListener: any;
+  return compareKey(
+    one.state.key,
+    two.state.key
+  );
+}
 
+type Layout = {
+  initWidth: number,
+  initHeight: number,
+  width: Animated.Value;
+  height: Animated.Value;
+};
+
+type OverlayRenderer = (
+  position: Animated.Value,
+  layout: Layout
+) => ReactElement;
+
+type SceneRenderer = (
+  state: NavigationState,
+  index: number,
+  position: Animated.Value,
+  layout: Layout
+) => ReactElement
+
+type Props = {
+  navigationState: NavigationParentState;
+  renderScene: SceneRenderer;
+  renderOverlay: ?OverlayRenderer;
+  style: any;
+};
+
+class NavigationAnimatedView extends React.Component {
+  _animatedHeight: Animated.Value;
+  _animatedWidth: Animated.Value;
+  _lastHeight: number;
+  _lastWidth: number;
   props: Props;
-  state: State;
-
-  static propTypes = {
-    applyAnimation: PropTypes.func,
-    navigationState: NavigationPropTypes.navigationState.isRequired,
-    onNavigate: PropTypes.func.isRequired,
-    renderOverlay: PropTypes.func,
-    renderScene: PropTypes.func.isRequired,
-  };
-
-  static defaultProps = {
-    applyAnimation: applyDefaultAnimation,
-  };
-
-  constructor(props: Props, context: any) {
-    super(props, context);
-
-    this._layout = {
-      initWidth: 0,
-      initHeight: 0,
-      width: new Animated.Value(0),
-      height: new Animated.Value(0),
-    };
-
+  constructor(props) {
+    super(props);
+    this._animatedHeight = new Animated.Value(0);
+    this._animatedWidth = new Animated.Value(0);
     this.state = {
       position: new Animated.Value(this.props.navigationState.index),
-      scenes: NavigationScenesReducer([], this.props.navigationState),
+      scenes: new Map(),
     };
   }
-
-  componentWillMount(): void {
-    this._onLayout = this._onLayout.bind(this);
-    this._onProgressChange = this._onProgressChange.bind(this);
+  componentWillMount() {
+    this.setState({
+      scenes: this._reduceScenes(this.state.scenes, this.props.navigationState),
+    });
   }
-
-  componentDidMount(): void {
-    this._positionListener =
-      this.state.position.addListener(this._onProgressChange);
+  componentDidMount() {
+    this.postionListener = this.state.position.addListener(this._onProgressChange.bind(this));
   }
-
-  componentWillReceiveProps(nextProps: Props): void {
+  componentWillReceiveProps(nextProps) {
     if (nextProps.navigationState !== this.props.navigationState) {
       this.setState({
-        scenes: NavigationScenesReducer(
-          this.state.scenes,
-          nextProps.navigationState,
-          this.props.navigationState
-        ),
+        scenes: this._reduceScenes(this.state.scenes, nextProps.navigationState, this.props.navigationState),
       });
     }
   }
-
-  componentDidUpdate(lastProps: Props): void {
+  componentDidUpdate(lastProps) {
     if (lastProps.navigationState.index !== this.props.navigationState.index) {
-      this.props.applyAnimation(
+      Animated.spring(
         this.state.position,
-        this.props.navigationState,
-        lastProps.navigationState
-      );
+        {toValue: this.props.navigationState.index}
+      ).start();
     }
   }
-
-  componentWillUnmount(): void {
-    this.state.position.removeListener(this._positionListener);
+  componentWillUnmount() {
+    if (this.postionListener) {
+      this.state.position.removeListener(this.postionListener);
+      this.postionListener = null;
+    }
   }
-
   _onProgressChange(data: Object): void {
-    const delta = Math.abs(data.value - this.props.navigationState.index);
-    if (delta > Number.EPSILON) {
+    if (Math.abs(data.value - this.props.navigationState.index) > Number.EPSILON) {
       return;
     }
-
-    const scenes = this.state.scenes.filter(scene => {
-      return !scene.isStale;
+    this.state.scenes.forEach((scene, index) => {
+      if (scene.isStale) {
+        const scenes = this.state.scenes.slice();
+        scenes.splice(index, 1);
+        this.setState({ scenes, });
+      }
+    });
+  }
+  _reduceScenes(
+    scenes: Array<NavigationScene>,
+    nextState: NavigationParentState,
+    lastState: ?NavigationParentState
+  ): Array<NavigationScene> {
+    let nextScenes = nextState.children.map((child, index) => {
+      return {
+        index,
+        state: child,
+        isStale: false,
+      };
     });
 
-    if (scenes.length !== this.state.scenes.length) {
-      this.setState({ scenes });
+    if (lastState) {
+      lastState.children.forEach((child, index) => {
+        if (!NavigationStateUtils.get(nextState, child.key)) {
+          nextScenes.push({
+            index,
+            state: child,
+            isStale: true,
+          });
+        }
+      });
     }
-  }
 
-  render(): ReactElement {
-    const overlay = this._renderOverlay();
-    const scenes = this._renderScenes();
+    nextScenes = nextScenes.sort(compareScenes);
+
+    return nextScenes;
+  }
+  render() {
     return (
       <View
-        onLayout={this._onLayout}
+        onLayout={(e) => {
+          const {height, width} = e.nativeEvent.layout;
+          this._animatedHeight &&
+            this._animatedHeight.setValue(height);
+          this._animatedWidth &&
+            this._animatedWidth.setValue(width);
+          this._lastHeight = height;
+          this._lastWidth = width;
+        }}
         style={this.props.style}>
-        <View style={styles.scenes} key="scenes">
-          {scenes}
-        </View>
-        {overlay}
+        {this.state.scenes.map(this._renderScene, this)}
+        {this._renderOverlay(this._renderOverlay, this)}
       </View>
     );
   }
-
-  _renderScenes(): Array<?ReactElement> {
-    return this.state.scenes.map(this._renderScene, this);
+  _getLayout() {
+    return {
+      height: this._animatedHeight,
+      width: this._animatedWidth,
+      initWidth: this._lastWidth,
+      initHeight: this._lastHeight,
+    };
   }
-
-  _renderScene(scene: NavigationScene): ?ReactElement {
-    const {
-      navigationState,
-      onNavigate,
-      renderScene,
-    } = this.props;
-
-    const {
-      position,
-      scenes,
-    } = this.state;
-
-    return renderScene({
-      layout: this._layout,
-      navigationState,
-      onNavigate,
-      position,
-      scene,
-      scenes,
-    });
+  _renderScene(scene: NavigationScene) {
+    return this.props.renderScene(
+      scene.state,
+      scene.index,
+      this.state.position,
+      this._getLayout()
+    );
   }
-
-  _renderOverlay(): ?ReactElement {
-    if (this.props.renderOverlay) {
-      const {
-        navigationState,
-        onNavigate,
-        renderOverlay,
-      } = this.props;
-
-      const {
-        position,
-        scenes,
-      } = this.state;
-
-      return renderOverlay({
-        layout: this._layout,
-        navigationState,
-        onNavigate,
-        position,
-        scene: scenes[navigationState.index],
-        scenes,
-      });
+  _renderOverlay() {
+    const {renderOverlay} = this.props;
+    if (renderOverlay) {
+      return renderOverlay(
+        this.state.position,
+        this._getLayout()
+      );
     }
     return null;
   }
-
-  _onLayout(event: any): void {
-    const {height, width} = event.nativeEvent.layout;
-
-    const layout = {
-      ...this._layout,
-      initHeight: height,
-      initWidth: width,
-    };
-
-    this._layout = layout;
-
-    layout.height.setValue(height);
-    layout.width.setValue(width);
-  }
 }
-
-const styles = StyleSheet.create({
-  scenes: {
-    flex: 1,
-  },
-});
 
 NavigationAnimatedView = NavigationContainer.create(NavigationAnimatedView);
 

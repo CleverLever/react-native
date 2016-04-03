@@ -32,8 +32,6 @@ public class ARTGroupShadowNode extends ARTVirtualNode {
         child.draw(canvas, paint, opacity);
         child.markUpdateSeen();
       }
-
-      restoreCanvas(canvas);
     }
   }
 }

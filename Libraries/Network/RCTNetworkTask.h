@@ -18,12 +18,6 @@ typedef void (^RCTURLRequestIncrementalDataBlock)(NSData *data);
 typedef void (^RCTURLRequestProgressBlock)(int64_t progress, int64_t total);
 typedef void (^RCTURLRequestResponseBlock)(NSURLResponse *response);
 
-typedef NS_ENUM(NSInteger, RCTNetworkTaskStatus) {
-  RCTNetworkTaskPending = 0,
-  RCTNetworkTaskInProgress,
-  RCTNetworkTaskFinished,
-};
-
 @interface RCTNetworkTask : NSObject <RCTURLRequestDelegate>
 
 @property (nonatomic, readonly) NSURLRequest *request;
@@ -36,8 +30,6 @@ typedef NS_ENUM(NSInteger, RCTNetworkTaskStatus) {
 @property (nonatomic, copy) RCTURLRequestIncrementalDataBlock incrementalDataBlock;
 @property (nonatomic, copy) RCTURLRequestResponseBlock responseBlock;
 @property (nonatomic, copy) RCTURLRequestProgressBlock uploadProgressBlock;
-
-@property (nonatomic, readonly) RCTNetworkTaskStatus status;
 
 - (instancetype)initWithRequest:(NSURLRequest *)request
                         handler:(id<RCTURLRequestHandler>)handler

@@ -8,12 +8,11 @@
  */
 'use strict';
 
-jest.autoMockOff();
-jest.setMock('uglify-js')
+jest.setMock('worker-farm', function() { return () => {}; })
+    .setMock('uglify-js')
     .mock('net')
     .mock('fs')
-    .mock('bser')
-    .mock('../../Server');
+    .dontMock('../SocketServer');
 
 var PackagerServer = require('../../Server');
 var SocketServer = require('../SocketServer');

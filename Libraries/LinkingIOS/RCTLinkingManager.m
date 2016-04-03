@@ -33,19 +33,7 @@ RCT_EXPORT_MODULE()
 
 - (NSDictionary<NSString *, id> *)constantsToExport
 {
-  NSURL *initialURL;
-
-  if (_bridge.launchOptions[UIApplicationLaunchOptionsURLKey]) {
-    initialURL = _bridge.launchOptions[UIApplicationLaunchOptionsURLKey];
-  } else if (&UIApplicationLaunchOptionsUserActivityDictionaryKey &&
-      _bridge.launchOptions[UIApplicationLaunchOptionsUserActivityDictionaryKey]) {
-    NSDictionary *userActivityDictionary = _bridge.launchOptions[UIApplicationLaunchOptionsUserActivityDictionaryKey];
-
-    if ([userActivityDictionary[UIApplicationLaunchOptionsUserActivityTypeKey] isEqual:NSUserActivityTypeBrowsingWeb]) {
-      initialURL = ((NSUserActivity *)userActivityDictionary[@"UIApplicationLaunchOptionsUserActivityKey"]).webpageURL;
-    }
-  }
-
+  NSURL *initialURL = _bridge.launchOptions[UIApplicationLaunchOptionsURLKey];
   return @{@"initialURL": RCTNullIfNil(initialURL.absoluteString)};
 }
 

@@ -12,7 +12,6 @@
 
 #if RCT_DEV && defined(__arm__)
 
-  .thumb
 	.align 5
   .globl SYMBOL_NAME(RCTProfileTrampoline)
 SYMBOL_NAME(RCTProfileTrampoline):

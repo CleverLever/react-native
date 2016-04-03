@@ -20,6 +20,8 @@ import java.util.Map;
 
 import com.facebook.react.common.MapBuilder;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TextNode;
@@ -187,11 +189,12 @@ public class NativeModuleRegistryTest {
 
   private static String getModuleDescriptions(NativeModuleRegistry registry)
       throws IOException {
-    StringWriter stringWriter = new StringWriter();
-    JsonWriter writer = new JsonWriter(stringWriter);
-    registry.writeModuleDescriptions(writer);
-    writer.close();
-    return stringWriter.getBuffer().toString();
+    JsonFactory jsonFactory = new JsonFactory();
+    StringWriter writer = new StringWriter();
+    JsonGenerator jg = jsonFactory.createGenerator(writer);
+    registry.writeModuleDescriptions(jg);
+    jg.close();
+    return writer.getBuffer().toString();
   }
 
   private static class MethodsModule extends BaseJavaModule {

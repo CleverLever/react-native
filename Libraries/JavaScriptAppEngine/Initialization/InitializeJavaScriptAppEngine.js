@@ -221,7 +221,6 @@ if (__DEV__) {
   require('RCTDebugComponentOwnership');
 }
 require('RCTDeviceEventEmitter');
-require('RCTNativeAppEventEmitter');
 require('PerformanceLogger');
 
 if (__DEV__) {

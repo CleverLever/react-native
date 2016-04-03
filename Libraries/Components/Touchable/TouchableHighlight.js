@@ -25,7 +25,7 @@ var View = require('View');
 
 var ensureComponentIsNative = require('ensureComponentIsNative');
 var ensurePositiveDelayProps = require('ensurePositiveDelayProps');
-var keyOf = require('fbjs/lib/keyOf');
+var keyOf = require('keyOf');
 var merge = require('merge');
 var onlyChild = require('onlyChild');
 
@@ -176,10 +176,6 @@ var TouchableHighlight = React.createClass({
     return this.props.pressRetentionOffset || PRESS_RETENTION_OFFSET;
   },
 
-  touchableGetHitSlop: function() {
-    return this.props.hitSlop;
-  },
-
   touchableGetHighlightDelayMS: function() {
     return this.props.delayPressIn;
   },
@@ -217,9 +213,9 @@ var TouchableHighlight = React.createClass({
 
   _hasPressHandler: function() {
     return !!(
-      this.props.onPress ||
-      this.props.onPressIn ||
-      this.props.onPressOut ||
+      this.props.onPress || 
+      this.props.onPressIn || 
+      this.props.onPressOut || 
       this.props.onLongPress
     );
   },
@@ -234,7 +230,6 @@ var TouchableHighlight = React.createClass({
         ref={UNDERLAY_REF}
         style={this.state.underlayStyle}
         onLayout={this.props.onLayout}
-        hitSlop={this.props.hitSlop}
         onStartShouldSetResponder={this.touchableHandleStartShouldSetResponder}
         onResponderTerminationRequest={this.touchableHandleResponderTerminationRequest}
         onResponderGrant={this.touchableHandleResponderGrant}

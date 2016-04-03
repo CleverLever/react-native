@@ -15,6 +15,7 @@ import java.util.LinkedList;
 import java.util.Map;
 
 import android.graphics.PorterDuff;
+import android.os.SystemClock;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.InputType;
@@ -32,7 +33,6 @@ import com.facebook.react.bridge.JSApplicationIllegalArgumentException;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.common.MapBuilder;
-import com.facebook.react.common.SystemClock;
 import com.facebook.react.uimanager.BaseViewManager;
 import com.facebook.react.uimanager.LayoutShadowNode;
 import com.facebook.react.uimanager.PixelUtil;
@@ -43,8 +43,8 @@ import com.facebook.react.uimanager.ViewProps;
 import com.facebook.react.uimanager.annotations.ReactProp;
 import com.facebook.react.uimanager.events.EventDispatcher;
 import com.facebook.react.views.text.DefaultStyleValuesUtil;
-import com.facebook.react.views.text.TextInlineImageSpan;
 import com.facebook.react.views.text.ReactTextUpdate;
+import com.facebook.react.views.text.TextInlineImageSpan;
 
 /**
  * Manages instances of TextInput.
@@ -181,11 +181,6 @@ public class ReactTextInputManager extends BaseViewManager<ReactEditText, Layout
     }
   }
 
-  @ReactProp(name = "blurOnSubmit", defaultBoolean = true)
-  public void setBlurOnSubmit(ReactEditText view, boolean blurOnSubmit) {
-    view.setBlurOnSubmit(blurOnSubmit);
-  }
-
   @ReactProp(name = "placeholder")
   public void setPlaceholder(ReactEditText view, @Nullable String placeholder) {
     view.setHint(placeholder);
@@ -206,20 +201,6 @@ public class ReactTextInputManager extends BaseViewManager<ReactEditText, Layout
       view.setHighlightColor(DefaultStyleValuesUtil.getDefaultTextColorHighlight(view.getContext()));
     } else {
       view.setHighlightColor(color);
-    }
-  }
-
-  @ReactProp(name = "selectTextOnFocus", defaultBoolean = false)
-  public void setSelectTextOnFocus(ReactEditText view, boolean selectTextOnFocus) {
-    view.setSelectAllOnFocus(selectTextOnFocus);
-  }
-
-  @ReactProp(name = ViewProps.COLOR, customType = "Color")
-  public void setColor(ReactEditText view, @Nullable Integer color) {
-    if (color == null) {
-      view.setTextColor(DefaultStyleValuesUtil.getDefaultTextColor(view.getContext()));
-    } else {
-      view.setTextColor(color);
     }
   }
 
@@ -446,7 +427,7 @@ public class ReactTextInputManager extends BaseViewManager<ReactEditText, Layout
       mEventDispatcher.dispatchEvent(
           new ReactTextChangedEvent(
               mEditText.getId(),
-              SystemClock.nanoTime(),
+              SystemClock.uptimeMillis(),
               s.toString(),
               (int) PixelUtil.toDIPFromPixel(contentWidth),
               (int) PixelUtil.toDIPFromPixel(contentHeight),
@@ -455,7 +436,7 @@ public class ReactTextInputManager extends BaseViewManager<ReactEditText, Layout
       mEventDispatcher.dispatchEvent(
           new ReactTextInputEvent(
               mEditText.getId(),
-              SystemClock.nanoTime(),
+              SystemClock.uptimeMillis(),
               newText,
               oldText,
               start,
@@ -481,17 +462,17 @@ public class ReactTextInputManager extends BaseViewManager<ReactEditText, Layout
               eventDispatcher.dispatchEvent(
                   new ReactTextInputFocusEvent(
                       editText.getId(),
-                      SystemClock.nanoTime()));
+                      SystemClock.uptimeMillis()));
             } else {
               eventDispatcher.dispatchEvent(
                   new ReactTextInputBlurEvent(
                       editText.getId(),
-                      SystemClock.nanoTime()));
+                      SystemClock.uptimeMillis()));
 
               eventDispatcher.dispatchEvent(
                   new ReactTextInputEndEditingEvent(
                       editText.getId(),
-                      SystemClock.nanoTime(),
+                      SystemClock.uptimeMillis(),
                       editText.getText().toString()));
             }
           }
@@ -509,10 +490,10 @@ public class ReactTextInputManager extends BaseViewManager<ReactEditText, Layout
               eventDispatcher.dispatchEvent(
                   new ReactTextInputSubmitEditingEvent(
                       editText.getId(),
-                      SystemClock.nanoTime(),
+                      SystemClock.uptimeMillis(),
                       editText.getText().toString()));
             }
-            return !editText.getBlurOnSubmit();
+            return false;
           }
         });
   }
@@ -539,7 +520,7 @@ public class ReactTextInputManager extends BaseViewManager<ReactEditText, Layout
         mEventDispatcher.dispatchEvent(
             new ReactTextInputSelectionEvent(
                 mReactEditText.getId(),
-                SystemClock.nanoTime(),
+                SystemClock.uptimeMillis(),
                 start,
                 end
             )

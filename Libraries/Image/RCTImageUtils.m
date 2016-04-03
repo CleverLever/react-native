@@ -316,8 +316,7 @@ UIImage *__nullable RCTTransformImage(UIImage *image,
     return nil;
   }
 
-  BOOL opaque = !RCTImageHasAlpha(image.CGImage);
-  UIGraphicsBeginImageContextWithOptions(destSize, opaque, destScale);
+  UIGraphicsBeginImageContextWithOptions(destSize, NO, destScale);
   CGContextRef currentContext = UIGraphicsGetCurrentContext();
   CGContextConcatCTM(currentContext, transform);
   [image drawAtPoint:CGPointZero];

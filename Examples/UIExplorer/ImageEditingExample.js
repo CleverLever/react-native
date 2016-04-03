@@ -47,11 +47,10 @@ type ImageCropData = {
   offset: ImageOffset;
   size: ImageSize;
   displaySize?: ?ImageSize;
-  resizeMode?: ?any;
+  resizeMode?: ?any; 
 };
 
 class SquareImageCropper extends React.Component {
-  state: any;
   _isMounted: boolean;
   _transformData: ImageCropData;
 

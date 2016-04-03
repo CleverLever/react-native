@@ -20,9 +20,6 @@ var ErrorUtils = {
   setGlobalHandler: function(fun) {
     ErrorUtils._globalHandler = fun;
   },
-  getGlobalHandler: function() {
-    return ErrorUtils._globalHandler;
-  },
   reportError: function(error) {
     ErrorUtils._globalHandler && ErrorUtils._globalHandler(error);
   },

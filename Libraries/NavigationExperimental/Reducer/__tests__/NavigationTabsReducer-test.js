@@ -11,9 +11,8 @@
 'use strict';
 
 jest
- .dontMock('NavigationTabsReducer')
- .dontMock('NavigationFindReducer')
- .dontMock('NavigationStateUtils');
+ .autoMockOff()
+ .mock('ErrorUtils');
 
 const NavigationTabsReducer = require('NavigationTabsReducer');
 

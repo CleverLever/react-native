@@ -7,7 +7,9 @@
  * of patent rights can be found in the PATENTS file in the same directory.
  */
 
-#include "jni/fbjni.h"
+#include "Exceptions.h"
+#include "CoreClasses.h"
+#include <jni/ALog.h>
 
 #include <fb/assert.h>
 

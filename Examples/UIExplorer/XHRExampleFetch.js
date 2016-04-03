@@ -26,8 +26,6 @@ var {
 
 
 class XHRExampleFetch extends React.Component {
-  state: any;
-  responseURL: ?string;
 
   constructor(props: any) {
     super(props);

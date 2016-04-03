@@ -11,8 +11,6 @@
 
 #import "RCTBridgeDelegate.h"
 
-extern uint32_t const RCTRAMBundleMagicNumber;
-
 @class RCTBridge;
 
 /**

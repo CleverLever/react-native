@@ -26,8 +26,6 @@ var {
 } = React;
 
 class AnExTilt extends React.Component {
-  state: any;
-
   constructor(props: Object) {
     super(props);
     this.state = {

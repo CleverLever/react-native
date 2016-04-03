@@ -84,8 +84,6 @@ class NotificationExample extends React.Component {
 }
 
 class NotificationPermissionExample extends React.Component {
-  state: any;
-
   constructor(props) {
     super(props);
     this.state = {permissions: null};
@@ -128,7 +126,7 @@ exports.description = 'Apple PushNotification and badge value';
 exports.examples = [
 {
   title: 'Badge Number',
-  render(): ReactElement {
+  render(): React.Component {
     PushNotificationIOS.requestPermissions();
 
     return (
@@ -147,13 +145,13 @@ exports.examples = [
 },
 {
   title: 'Push Notifications',
-  render(): ReactElement {
+  render(): React.Component {
     return <NotificationExample />;
   }
 },
 {
   title: 'Notifications Permissions',
-  render(): ReactElement {
+  render(): React.Component {
     return <NotificationPermissionExample />;
   }
 }];

@@ -12,6 +12,7 @@
 
 'use strict';
 
+var HMRClient = require('../../Utilities/HMRClient');
 var Promise = require('Promise');
 var NativeModules = require('NativeModules');
 var SourceMapConsumer = require('SourceMap').SourceMapConsumer;

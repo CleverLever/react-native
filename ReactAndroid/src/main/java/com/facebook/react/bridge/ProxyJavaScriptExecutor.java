@@ -32,7 +32,7 @@ public class ProxyJavaScriptExecutor extends JavaScriptExecutor {
     }
 
     @Override
-    public JavaScriptExecutor create(WritableNativeMap jscConfig) throws Exception {
+    public JavaScriptExecutor create() throws Exception {
       return new ProxyJavaScriptExecutor(mJavaJSExecutorFactory.create());
     }
   }

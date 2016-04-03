@@ -29,11 +29,9 @@ public:
   explicit String(const char* utf8) :
     m_string(Adopt, JSStringCreateWithUTF8CString(utf8))
   {}
-
   String(String&& other) :
     m_string(Adopt, other.m_string.leakRef())
   {}
-
   String(const String& other) :
     m_string(other.m_string)
   {}

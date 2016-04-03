@@ -14,6 +14,7 @@ import java.util.Collection;
 import com.facebook.react.bridge.queue.ReactQueueConfiguration;
 import com.facebook.react.common.annotations.VisibleForTesting;
 import com.facebook.proguard.annotations.DoNotStrip;
+import com.facebook.react.common.annotations.VisibleForTesting;
 
 /**
  * A higher level API on top of the asynchronous JSC bridge. This provides an
@@ -21,19 +22,12 @@ import com.facebook.proguard.annotations.DoNotStrip;
  * Java APIs be invokable from JavaScript as well.
  */
 @DoNotStrip
-public interface CatalystInstance extends MemoryPressureListener {
+public interface CatalystInstance {
   void runJSBundle();
   // This is called from java code, so it won't be stripped anyway, but proguard will rename it,
   // which this prevents.
   @DoNotStrip
-  void invokeCallback(ExecutorToken executorToken, final int callbackID, final NativeArray arguments);
-  @DoNotStrip
-  void callFunction(
-      ExecutorToken executorToken,
-      int moduleId,
-      int methodId,
-      NativeArray arguments,
-      String tracingName);
+  void invokeCallback(final int callbackID, final NativeArray arguments);
   /**
    * Destroys this catalyst instance, waiting for any other threads in ReactQueueConfiguration
    * (besides the UI thread) to finish running. Must be called from the UI thread so that we can
@@ -51,9 +45,10 @@ public interface CatalystInstance extends MemoryPressureListener {
   ReactQueueConfiguration getReactQueueConfiguration();
 
   <T extends JavaScriptModule> T getJSModule(Class<T> jsInterface);
-  <T extends JavaScriptModule> T getJSModule(ExecutorToken executorToken, Class<T> jsInterface);
   <T extends NativeModule> T getNativeModule(Class<T> nativeModuleInterface);
   Collection<NativeModule> getNativeModules();
+
+  void handleMemoryPressure(MemoryPressure level);
 
   /**
    * Adds a idle listener for this Catalyst instance. The listener will receive notifications

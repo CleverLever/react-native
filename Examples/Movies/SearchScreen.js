@@ -27,7 +27,7 @@ var {
 } = React;
 var TimerMixin = require('react-timer-mixin');
 
-var invariant = require('fbjs/lib/invariant');
+var invariant = require('invariant');
 var dismissKeyboard = require('dismissKeyboard');
 
 var MovieCell = require('./MovieCell');

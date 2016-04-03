@@ -13,7 +13,7 @@
 
 const ErrorUtils = require('ErrorUtils');
 
-const invariant = require('fbjs/lib/invariant');
+const invariant = require('invariant');
 
 type SimpleTask = {
   name: string;
@@ -24,8 +24,6 @@ type PromiseTask = {
   gen: () => Promise;
 };
 export type Task = Function | SimpleTask | PromiseTask;
-
-const DEBUG = false;
 
 /**
  * TaskQueue - A system for queueing and executing a mix of simple callbacks and
@@ -83,15 +81,13 @@ class TaskQueue {
    * Executes the next task in the queue.
    */
   processNext(): void {
-    const queue = this._getCurrentQueue();
+    let queue = this._getCurrentQueue();
     if (queue.length) {
       const task = queue.shift();
       try {
         if (task.gen) {
-          DEBUG && console.log('genPromise for task ' + task.name);
           this._genPromise((task: any)); // Rather than annoying tagged union
         } else if (task.run) {
-          DEBUG && console.log('run task ' + task.name);
           task.run();
         } else {
           invariant(
@@ -99,7 +95,6 @@ class TaskQueue {
             'Expected Function, SimpleTask, or PromiseTask, but got: ' +
               JSON.stringify(task)
           );
-          DEBUG && console.log('run anonymous task');
           task();
         }
       } catch (e) {
@@ -120,7 +115,6 @@ class TaskQueue {
         queue.tasks.length === 0 &&
         this._queueStack.length > 1) {
       this._queueStack.pop();
-      DEBUG && console.log('popped queue: ', {stackIdx, queueStackSize: this._queueStack.length});
       return this._getCurrentQueue();
     } else {
       return queue.tasks;
@@ -134,11 +128,8 @@ class TaskQueue {
     // happens once it is fully processed.
     this._queueStack.push({tasks: [], popable: false});
     const stackIdx = this._queueStack.length - 1;
-    DEBUG && console.log('push new queue: ', {stackIdx});
-    DEBUG && console.log('exec gen task ' + task.name);
     ErrorUtils.applyWithGuard(task.gen)
       .then(() => {
-        DEBUG && console.log('onThen for gen task ' + task.name, {stackIdx, queueStackSize: this._queueStack.length});
         this._queueStack[stackIdx].popable = true;
         this.hasTasksToProcess() && this._onMoreTasks();
       })

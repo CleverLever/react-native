@@ -6,9 +6,9 @@
 
 var BoundingDimensions = require('BoundingDimensions');
 var Position = require('Position');
-var TouchEventUtils = require('fbjs/lib/TouchEventUtils');
+var TouchEventUtils = require('TouchEventUtils');
 
-var keyMirror = require('fbjs/lib/keyMirror');
+var keyMirror = require('keyMirror');
 var queryLayoutByID = require('queryLayoutByID');
 
 /**
@@ -337,7 +337,7 @@ var TouchableMixin = {
    * Must return true to start the process of `Touchable`.
    */
   touchableHandleStartShouldSetResponder: function() {
-    return !this.props.disabled;
+    return true;
   },
 
   /**
@@ -431,16 +431,6 @@ var TouchableMixin = {
     var pressExpandTop = pressRectOffset.top;
     var pressExpandRight = pressRectOffset.right;
     var pressExpandBottom = pressRectOffset.bottom;
-
-    var hitSlop = this.touchableGetHitSlop ?
-      this.touchableGetHitSlop() : null;
-
-    if (hitSlop) {
-      pressExpandLeft += hitSlop.left;
-      pressExpandTop += hitSlop.top;
-      pressExpandRight += hitSlop.right;
-      pressExpandBottom += hitSlop.bottom;
-    }
 
     var touch = TouchEventUtils.extractSingleTouch(e.nativeEvent);
     var pageX = touch && touch.pageX;
@@ -599,22 +589,18 @@ var TouchableMixin = {
    * @sideeffects
    */
   _receiveSignal: function(signal, e) {
-    var responderID = this.state.touchable.responderID;
     var curState = this.state.touchable.touchState;
     var nextState = Transitions[curState] && Transitions[curState][signal];
-    if (!responderID && signal === Signals.RESPONDER_RELEASE) {
-      return;
-    }
     if (!nextState) {
       throw new Error(
         'Unrecognized signal `' + signal + '` or state `' + curState +
-        '` for Touchable responder `' + responderID + '`'
+        '` for Touchable responder `' + this.state.touchable.responderID + '`'
       );
     }
     if (nextState === States.ERROR) {
       throw new Error(
         'Touchable cannot transition from `' + curState + '` to `' + signal +
-        '` for responder `' + responderID + '`'
+        '` for responder `' + this.state.touchable.responderID + '`'
       );
     }
     if (curState !== nextState) {

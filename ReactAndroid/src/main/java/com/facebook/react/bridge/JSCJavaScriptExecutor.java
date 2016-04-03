@@ -16,8 +16,8 @@ import com.facebook.soloader.SoLoader;
 public class JSCJavaScriptExecutor extends JavaScriptExecutor {
   public static class Factory implements JavaScriptExecutor.Factory {
     @Override
-    public JavaScriptExecutor create(WritableNativeMap jscConfig) throws Exception {
-      return new JSCJavaScriptExecutor(jscConfig);
+    public JavaScriptExecutor create() throws Exception {
+      return new JSCJavaScriptExecutor();
     }
   }
 
@@ -25,10 +25,10 @@ public class JSCJavaScriptExecutor extends JavaScriptExecutor {
     SoLoader.loadLibrary(ReactBridge.REACT_NATIVE_LIB);
   }
 
-  public JSCJavaScriptExecutor(WritableNativeMap jscConfig) {
-    initialize(jscConfig);
+  public JSCJavaScriptExecutor() {
+    initialize();
   }
 
-  private native void initialize(WritableNativeMap jscConfig);
+  private native void initialize();
 
 }

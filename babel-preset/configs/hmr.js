@@ -8,28 +8,21 @@
  */
 'use strict';
 
-var path = require('path');
 var resolvePlugins = require('../lib/resolvePlugins');
 
-var hmrTransform = 'react-transform-hmr/lib/index.js';
-var transformPath = require.resolve(hmrTransform);
-
-module.exports = function(options, filename) {
-  var transform = filename
-      ? './' + path.relative(path.dirname(filename), transformPath) // packager can't handle absolute paths
-      : hmrTransform;
+module.exports = function(options) {
   return {
     plugins: resolvePlugins([
       [
         'react-transform',
         {
           transforms: [{
-            transform: transform,
-            imports: ['react-native/Libraries/react-native/react-native.js'],
+            transform: 'react-transform-hmr/lib/index.js',
+            imports: ['React'],
             locals: ['module'],
           }]
         },
       ]
     ])
   };
-};
+}

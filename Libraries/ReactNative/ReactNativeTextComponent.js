@@ -14,13 +14,14 @@
 var ReactNativeTagHandles = require('ReactNativeTagHandles');
 var UIManager = require('UIManager');
 
-var invariant = require('fbjs/lib/invariant');
+var assign = require('Object.assign');
+var invariant = require('invariant');
 
 var ReactNativeTextComponent = function(props) {
   // This constructor and its argument is currently used by mocks.
 };
 
-Object.assign(ReactNativeTextComponent.prototype, {
+assign(ReactNativeTextComponent.prototype, {
 
   construct: function(text) {
     // This is really a ReactText (ReactNode), not a ReactElement

@@ -130,7 +130,7 @@ RCT_EXPORT_MODULE()
 
 #pragma mark - Private API
 
-- (void)beginLocationUpdatesWithDesiredAccuracy:(CLLocationAccuracy)desiredAccuracy
+- (void)beginLocationUpdates
 {
   if (!_locationManager) {
     _locationManager = [CLLocationManager new];
@@ -147,7 +147,6 @@ RCT_EXPORT_MODULE()
     [_locationManager requestWhenInUseAuthorization];
   }
 
-  _locationManager.desiredAccuracy = desiredAccuracy;
   // Start observing location
   [_locationManager startUpdatingLocation];
 }
@@ -179,7 +178,8 @@ RCT_EXPORT_METHOD(startObserving:(RCTLocationOptions)options)
     _observerOptions.accuracy = MIN(_observerOptions.accuracy, request.options.accuracy);
   }
 
-  [self beginLocationUpdatesWithDesiredAccuracy:_observerOptions.accuracy];
+  _locationManager.desiredAccuracy = _observerOptions.accuracy;
+  [self beginLocationUpdates];
   _observingLocation = YES;
 }
 
@@ -225,8 +225,8 @@ RCT_EXPORT_METHOD(getCurrentPosition:(RCTLocationOptions)options
 
   // Check if previous recorded location exists and is good enough
   if (_lastLocationEvent &&
-      [NSDate date].timeIntervalSince1970 - [RCTConvert NSTimeInterval:_lastLocationEvent[@"timestamp"]] < options.maximumAge &&
-      [_lastLocationEvent[@"coords"][@"accuracy"] doubleValue] <= options.accuracy) {
+      CFAbsoluteTimeGetCurrent() - [RCTConvert NSTimeInterval:_lastLocationEvent[@"timestamp"]] < options.maximumAge &&
+      [_lastLocationEvent[@"coords"][@"accuracy"] doubleValue] >= options.accuracy) {
 
     // Call success block with most recent known location
     successBlock(@[_lastLocationEvent]);
@@ -249,11 +249,8 @@ RCT_EXPORT_METHOD(getCurrentPosition:(RCTLocationOptions)options
   [_pendingRequests addObject:request];
 
   // Configure location manager and begin updating location
-  CLLocationAccuracy accuracy = options.accuracy;
-  if (_locationManager) {
-    accuracy = MIN(_locationManager.desiredAccuracy, accuracy);
-  }
-  [self beginLocationUpdatesWithDesiredAccuracy:accuracy];
+  _locationManager.desiredAccuracy = MIN(_locationManager.desiredAccuracy, options.accuracy);
+  [self beginLocationUpdates];
 }
 
 #pragma mark - CLLocationManagerDelegate
@@ -273,7 +270,7 @@ RCT_EXPORT_METHOD(getCurrentPosition:(RCTLocationOptions)options
       @"heading": @(location.course),
       @"speed": @(location.speed),
     },
-    @"timestamp": @([location.timestamp timeIntervalSince1970] * 1000) // in ms
+    @"timestamp": @(CFAbsoluteTimeGetCurrent() * 1000.0) // in ms
   };
 
   // Send event
@@ -289,7 +286,7 @@ RCT_EXPORT_METHOD(getCurrentPosition:(RCTLocationOptions)options
   }
   [_pendingRequests removeAllObjects];
 
-  // Stop updating if not observing
+  // Stop updating if not not observing
   if (!_observingLocation) {
     [_locationManager stopUpdatingLocation];
   }

@@ -24,12 +24,12 @@ var ReactNative = require('ReactNative');
 var UIExplorerBlock = require('./UIExplorerBlock');
 var UIExplorerPage = require('./UIExplorerPage');
 
-var invariant = require('fbjs/lib/invariant');
+var invariant = require('invariant');
 
 import type { Example, ExampleModule } from 'ExampleTypes';
 
 var createExamplePage = function(title: ?string, exampleModule: ExampleModule)
-  : ReactClass<any> {
+  : ReactClass<any, any, any> {
   invariant(!!exampleModule.examples, 'The module must have examples');
 
   var ExamplePage = React.createClass({
@@ -50,7 +50,6 @@ var createExamplePage = function(title: ?string, exampleModule: ExampleModule)
       // Hack warning: This is a hack because the www UI explorer requires
       // renderComponent to be called.
       var originalRender = React.render;
-      // $FlowFixMe React.renderComponent was deprecated in 0.12, should this be React.render?
       var originalRenderComponent = React.renderComponent;
       var originalIOSRender = ReactNative.render;
       var originalIOSRenderComponent = ReactNative.renderComponent;
