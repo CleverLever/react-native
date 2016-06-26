@@ -123,6 +123,7 @@ public:
   }
 
   Value callAsFunction(int nArgs, JSValueRef args[]);
+  Value callAsFunction();
 
   Value getProperty(const String& propName) const;
   Value getProperty(const char *propName) const;

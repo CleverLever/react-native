@@ -39,6 +39,13 @@ RCT_EXPORT_MODULE()
   [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
+- (instancetype)init
+{
+  // We're only overriding this to ensure the module gets created at startup
+  // TODO (t11106126): Remove once we have more declarative control over module setup.
+  return [super init];
+}
+
 - (void)setBridge:(RCTBridge *)bridge
 {
   _bridge = bridge;
@@ -73,7 +80,6 @@ RCT_EXPORT_METHOD(showMessage:(NSString *)message color:(UIColor *)color backgro
       _label.textAlignment = NSTextAlignmentCenter;
 
       [_window addSubview:_label];
-      [_window makeKeyAndVisible];
     }
 
     _label.text = message;

@@ -179,6 +179,25 @@ public class UIViewOperationQueue {
     }
   }
 
+  private final class SetChildrenOperation extends ViewOperation {
+
+    private final ReadableArray mChildrenTags;
+
+    public SetChildrenOperation(
+      int tag,
+      ReadableArray childrenTags) {
+      super(tag);
+      mChildrenTags = childrenTags;
+    }
+
+    @Override
+    public void execute() {
+      mNativeViewHierarchyManager.setChildren(
+        mTag,
+        mChildrenTags);
+    }
+  }
+
   private final class UpdateViewExtraData extends ViewOperation {
 
     private final Object mExtraData;
@@ -598,6 +617,13 @@ public class UIViewOperationQueue {
       @Nullable int[] tagsToDelete) {
     mOperations.add(
         new ManageChildrenOperation(reactTag, indicesToRemove, viewsToAdd, tagsToDelete));
+  }
+
+  public void enqueueSetChildren(
+    int reactTag,
+    ReadableArray childrenTags) {
+    mOperations.add(
+      new SetChildrenOperation(reactTag, childrenTags));
   }
 
   public void enqueueRegisterAnimation(Animation animation) {

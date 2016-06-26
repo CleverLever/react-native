@@ -31,4 +31,14 @@ public class ReactSettingsForTests implements DeveloperSettings {
   public boolean isElementInspectorEnabled() {
     return false;
   }
+
+  @Override
+  public boolean isRemoteJSDebugEnabled() {
+    return false;
+  }
+
+  @Override
+  public void setRemoteJSDebugEnabled(boolean remoteJSDebugEnabled) {
+
+  }
 }

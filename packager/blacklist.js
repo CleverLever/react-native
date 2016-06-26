@@ -14,8 +14,6 @@ var path = require('path');
 // modulePathIgnorePatterns.
 var sharedBlacklist = [
   /node_modules[/\\]react[/\\]dist[/\\].*/,
-  'node_modules/react/lib/React.js',
-  'node_modules/react/lib/ReactDOM.js',
 
   // For each of these fbjs files (especially the non-forks/stubs), we should
   // consider deleting the conflicting copy and just using the fbjs version.
@@ -79,14 +77,22 @@ var platformBlacklists = {
   web: [
     '.ios.js',
     '.android.js',
+    '.windows.js'
   ],
   ios: [
     '.web.js',
     '.android.js',
+    '.windows.js',
   ],
   android: [
     '.web.js',
     '.ios.js',
+    '.windows.js'
+  ],
+  windows: [
+    '.web.js',
+    '.ios.js',
+    '.android.js'
   ],
 };
 

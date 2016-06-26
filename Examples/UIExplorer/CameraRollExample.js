@@ -15,7 +15,8 @@
  */
 'use strict';
 
-const React = require('react-native');
+const React = require('react');
+const ReactNative = require('react-native');
 const {
   CameraRoll,
   Image,
@@ -25,7 +26,7 @@ const {
   Text,
   View,
   TouchableOpacity
-} = React;
+} = ReactNative;
 
 const CameraRollView = require('./CameraRollView');
 
@@ -136,6 +137,6 @@ exports.description = 'Example component that uses CameraRoll to list user\'s ph
 exports.examples = [
   {
     title: 'Photos',
-    render(): ReactElement { return <CameraRollExample />; }
+    render(): ReactElement<any> { return <CameraRollExample />; }
   }
 ];

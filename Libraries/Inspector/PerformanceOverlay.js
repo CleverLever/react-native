@@ -25,7 +25,7 @@ var PerformanceOverlay = React.createClass({
     for (var key in perfLogs) {
       if (perfLogs[key].totalTime) {
         items.push(
-          <View style={styles.row}>
+          <View style={styles.row} key={key}>
             <Text style={[styles.text, styles.label]}>{key}</Text>
             <Text style={[styles.text, styles.totalTime]}>
               {perfLogs[key].totalTime + 'ms'}
